@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -57,10 +58,35 @@ namespace AssetBookmarks.Editor
                     displayAddButton: false,
                     displayRemoveButton: false
                 );
+
+                var elements = EditorPrefs.GetString(PlayerPrefsKey, "").Split(',');
+                foreach (var element in elements)
+                {
+                    var e = element.Split('|');
+                    if (e.Length == 2 && Enum.TryParse<OpenType>(e[1], out var t))
+                    {
+                        Items.Add(new Item(e[0], t));
+                    }
+                }
             }
 
             public List<Item> Items { get; }
             public ReorderableList ReorderableList { get; }
+
+            private static string PlayerPrefsKey => $"AssetBookmarks{Application.productName}";
+
+            public void Save()
+            {
+                var stringBuilder = new StringBuilder();
+                foreach (var item in Items)
+                {
+                    stringBuilder.Append(item.Path);
+                    stringBuilder.Append("|");
+                    stringBuilder.Append(item.OpenType);
+                    stringBuilder.Append(",");
+                }
+                EditorPrefs.SetString(PlayerPrefsKey, stringBuilder.ToString());
+            }
         }
 
         private class Item
@@ -71,7 +97,7 @@ namespace AssetBookmarks.Editor
                 OpenType = openType;
             }
 
-            public string Path { get; set; }
+            public string Path { get; }
             public OpenType OpenType { get; set; }
         }
 

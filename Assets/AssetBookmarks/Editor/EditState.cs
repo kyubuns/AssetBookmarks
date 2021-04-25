@@ -20,6 +20,7 @@ namespace AssetBookmarks.Editor
 
             public void Dispose()
             {
+                _model.Save();
                 _model.ReorderableList.draggable = false;
                 _model.ReorderableList.displayRemove = false;
             }
