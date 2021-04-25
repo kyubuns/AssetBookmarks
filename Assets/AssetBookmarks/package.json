@@ -1,0 +1,16 @@
+{
+  "name": "dev.kyubuns.assetbookmarks",
+  "displayName": "AssetBookmarks",
+  "version": "1.0.0",
+  "unity": "2020.3",
+  "description": "Asset Bookmarks",
+  "documentationUrl": "https://github.com/kyubuns/AssetBookmarks",
+  "dependencies": {
+  },
+  "author": {
+    "name": "kyubuns",
+    "email": "kyubuns@gmail.com",
+    "url": "https://kyubuns.dev/"
+  },
+  "type": "library"
+}
