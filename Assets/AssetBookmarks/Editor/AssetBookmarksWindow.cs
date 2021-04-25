@@ -21,11 +21,17 @@ namespace AssetBookmarks.Editor
             var model = new Model();
             _state = new RunState(model);
             model.ReorderableList.drawElementCallback += DrawElementCallback;
+            model.ReorderableList.drawElementBackgroundCallback += DrawElementBackgroundCallback;
         }
 
         private void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             _state.DrawElementCallback(rect, index, isActive, isFocused);
+        }
+
+        private void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            _state.DrawElementBackgroundCallback(rect, index, isActive, isFocused);
         }
 
         public void OnGUI()
@@ -42,9 +48,9 @@ namespace AssetBookmarks.Editor
         {
             public Model()
             {
-                StringList = new List<string> { "0", "1", "2" };
+                Items = new List<Item>();
                 ReorderableList = new ReorderableList(
-                    elements: StringList,
+                    elements: Items,
                     elementType: typeof(string),
                     draggable: false,
                     displayHeader: false,
@@ -53,14 +59,35 @@ namespace AssetBookmarks.Editor
                 );
             }
 
-            public List<string> StringList { get; }
+            public List<Item> Items { get; }
             public ReorderableList ReorderableList { get; }
+        }
+
+        private class Item
+        {
+            public Item(string path, OpenType openType)
+            {
+                Path = path;
+                OpenType = openType;
+            }
+
+            public string Path { get; set; }
+            public OpenType OpenType { get; set; }
         }
 
         private interface IWindowState : IDisposable
         {
-            void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused);
             IWindowState OnGui();
+            void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused);
+            void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused);
+        }
+
+        private enum OpenType
+        {
+            Open,
+            Focus,
+            Ping,
+            Finder,
         }
     }
 }
