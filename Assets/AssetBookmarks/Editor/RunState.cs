@@ -35,12 +35,14 @@ namespace AssetBookmarks.Editor
                             break;
 
                         case OpenType.Focus:
-                            EditorUtility.FocusProjectWindow();
+                            EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
                             Selection.activeObject = AssetDatabase.LoadAssetAtPath<Object>(path);
+                            EditorUtility.FocusProjectWindow();
                             break;
 
                         case OpenType.Ping:
                             EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
+                            EditorUtility.FocusProjectWindow();
                             break;
 
                         case OpenType.Finder:
