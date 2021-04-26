@@ -10,4 +10,6 @@ https://user-images.githubusercontent.com/961165/116014888-6079a700-a672-11eb-9e
 
 ### UnityPackageManager
 
-- `https://github.com/kyubuns/AssetBookmarks.git?path=Assets/AssetBookmarks`
+- Open Package Manager Window
+- Select "Add package from git URL"
+- Enter `https://github.com/kyubuns/AssetBookmarks.git?path=Assets/AssetBookmarks`
