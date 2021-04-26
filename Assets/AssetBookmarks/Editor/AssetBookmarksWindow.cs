@@ -112,7 +112,6 @@ namespace AssetBookmarks.Editor
         {
             Open,
             Focus,
-            Ping,
             Finder,
         }
     }
