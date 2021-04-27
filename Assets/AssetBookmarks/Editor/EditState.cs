@@ -30,19 +30,21 @@ namespace AssetBookmarks.Editor
                 var path = _model.Items[index].Path;
                 var name = Path.GetFileNameWithoutExtension(path);
 
-                EditorGUI.LabelField(rect, name);
-
-                const float width = 100f;
-                rect.x = rect.width - width;
-                rect.width = width + 20f; // この20fはまじで謎。
+                var popupRect = new Rect(rect);
+                popupRect.x += 10;
+                popupRect.width = 60;
                 var prevValue = _model.Items[index].OpenType;
-                var newValue = (OpenType) EditorGUI.EnumPopup(rect, prevValue);
+                var newValue = (OpenType) EditorGUI.EnumPopup(popupRect, prevValue);
                 if (newValue != prevValue)
                 {
                     var tmp = _model.Items[index];
                     tmp.OpenType = newValue;
                     _model.Items[index] = tmp;
                 }
+
+                var labelRect = new Rect(rect);
+                labelRect.x = popupRect.x + popupRect.width + 10;
+                EditorGUI.LabelField(labelRect, name);
             }
 
             public void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused)
