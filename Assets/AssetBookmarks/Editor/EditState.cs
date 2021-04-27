@@ -27,24 +27,39 @@ namespace AssetBookmarks.Editor
 
             public void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused)
             {
-                var path = _model.Items[index].Path;
-                var name = Path.GetFileNameWithoutExtension(path);
+                var item = _model.Items[index];
 
                 var popupRect = new Rect(rect);
                 popupRect.x += 10;
                 popupRect.width = 60;
-                var prevValue = _model.Items[index].OpenType;
-                var newValue = (OpenType) EditorGUI.EnumPopup(popupRect, prevValue);
-                if (newValue != prevValue)
-                {
-                    var tmp = _model.Items[index];
-                    tmp.OpenType = newValue;
-                    _model.Items[index] = tmp;
-                }
 
                 var labelRect = new Rect(rect);
-                labelRect.x = popupRect.x + popupRect.width + 10;
-                EditorGUI.LabelField(labelRect, name);
+
+                if (item is ProjectItem projectItem)
+                {
+                    var path = projectItem.Path;
+                    var name = Path.GetFileNameWithoutExtension(path);
+
+                    var prevValue = projectItem.OpenType;
+                    var newValue = (OpenType) EditorGUI.EnumPopup(popupRect, prevValue);
+                    if (newValue != prevValue)
+                    {
+                        var tmp = projectItem;
+                        tmp.OpenType = newValue;
+                        _model.Items[index] = tmp;
+                    }
+
+                    labelRect.x = popupRect.x + popupRect.width + 10;
+                    EditorGUI.LabelField(labelRect, name);
+                }
+
+                if (item is OutsideItem outsideItem)
+                {
+                    var path = outsideItem.Path;
+
+                    labelRect.x = popupRect.x + popupRect.width + 10;
+                    EditorGUI.LabelField(labelRect, path);
+                }
             }
 
             public void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused)
@@ -68,7 +83,14 @@ namespace AssetBookmarks.Editor
                         DragAndDrop.AcceptDrag();
                         foreach (var path in DragAndDrop.paths)
                         {
-                            _model.Items.Add(new Item(path, OpenType.Focus));
+                            if (path.StartsWith("Assets"))
+                            {
+                                _model.Items.Add(new ProjectItem(path, OpenType.Focus));
+                            }
+                            else
+                            {
+                                _model.Items.Add(new OutsideItem(path));
+                            }
                         }
                         Event.current.Use();
                         break;

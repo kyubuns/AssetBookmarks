@@ -49,7 +49,7 @@ namespace AssetBookmarks.Editor
         {
             public Model()
             {
-                Items = new List<Item>();
+                Items = new List<IItem>();
                 ReorderableList = new ReorderableList(
                     elements: Items,
                     elementType: typeof(string),
@@ -63,14 +63,20 @@ namespace AssetBookmarks.Editor
                 foreach (var element in elements)
                 {
                     var e = element.Split('|');
+
                     if (e.Length == 2 && Enum.TryParse<OpenType>(e[1], out var t))
                     {
-                        Items.Add(new Item(e[0], t));
+                        Items.Add(new ProjectItem(e[0], t));
+                    }
+
+                    if (e.Length == 2 && e[0] == "o")
+                    {
+                        Items.Add(new OutsideItem(e[1]));
                     }
                 }
             }
 
-            public List<Item> Items { get; }
+            public List<IItem> Items { get; }
             public ReorderableList ReorderableList { get; }
 
             private static string PlayerPrefsKey => $"AssetBookmarks{Application.productName}";
@@ -78,27 +84,52 @@ namespace AssetBookmarks.Editor
             public void Save()
             {
                 var stringBuilder = new StringBuilder();
-                foreach (var item in Items)
-                {
-                    stringBuilder.Append(item.Path);
-                    stringBuilder.Append("|");
-                    stringBuilder.Append(item.OpenType);
-                    stringBuilder.Append(",");
-                }
+                foreach (var item in Items) item.Serialize(stringBuilder);
                 EditorPrefs.SetString(PlayerPrefsKey, stringBuilder.ToString());
             }
         }
 
-        private class Item
+        private interface IItem
         {
-            public Item(string path, OpenType openType)
+            void Serialize(StringBuilder stringBuilder);
+        }
+
+        private class ProjectItem : IItem
+        {
+            public ProjectItem(string path, OpenType openType)
             {
                 Path = path;
                 OpenType = openType;
             }
 
+            public void Serialize(StringBuilder stringBuilder)
+            {
+                stringBuilder.Append(Path);
+                stringBuilder.Append("|");
+                stringBuilder.Append(OpenType);
+                stringBuilder.Append(",");
+            }
+
             public string Path { get; }
             public OpenType OpenType { get; set; }
+        }
+
+        private class OutsideItem : IItem
+        {
+            public OutsideItem(string path)
+            {
+                Path = path;
+            }
+
+            public void Serialize(StringBuilder stringBuilder)
+            {
+                stringBuilder.Append("o");
+                stringBuilder.Append("|");
+                stringBuilder.Append(Path);
+                stringBuilder.Append(",");
+            }
+
+            public string Path { get; }
         }
 
         private interface IWindowState : IDisposable

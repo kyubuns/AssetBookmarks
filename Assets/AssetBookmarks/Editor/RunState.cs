@@ -23,30 +23,46 @@ namespace AssetBookmarks.Editor
 
             public void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused)
             {
-                var path = _model.Items[index].Path;
-                var name = Path.GetFileNameWithoutExtension(path);
-                var content = new GUIContent($" {_model.Items[index].OpenType} {name}", AssetDatabase.GetCachedIcon(path));
-                if (GUI.Button(rect, content))
+                var item = _model.Items[index];
+
+                if (item is ProjectItem projectItem)
                 {
-                    switch (_model.Items[index].OpenType)
+                    var path = projectItem.Path;
+                    var name = Path.GetFileNameWithoutExtension(path);
+                    var content = new GUIContent($" {projectItem.OpenType} {name}", AssetDatabase.GetCachedIcon(path));
+                    if (GUI.Button(rect, content))
                     {
-                        case OpenType.Open:
-                            AssetDatabase.OpenAsset(AssetDatabase.LoadAssetAtPath<Object>(path));
-                            break;
+                        switch (projectItem.OpenType)
+                        {
+                            case OpenType.Open:
+                                AssetDatabase.OpenAsset(AssetDatabase.LoadAssetAtPath<Object>(path));
+                                break;
 
-                        case OpenType.Focus:
-                            EditorUtility.FocusProjectWindow();
-                            EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
-                            Selection.activeObject = AssetDatabase.LoadAssetAtPath<Object>(path);
-                            EditorUtility.FocusProjectWindow();
-                            break;
+                            case OpenType.Focus:
+                                EditorUtility.FocusProjectWindow();
+                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
+                                Selection.activeObject = AssetDatabase.LoadAssetAtPath<Object>(path);
+                                EditorUtility.FocusProjectWindow();
+                                break;
 
-                        case OpenType.Finder:
-                            EditorUtility.RevealInFinder(path);
-                            break;
+                            case OpenType.Finder:
+                                EditorUtility.RevealInFinder(path);
+                                break;
 
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                }
+
+                if (item is OutsideItem outsideItem)
+                {
+                    var path = outsideItem.Path;
+                    var name = Path.GetFileName(path);
+                    var content = new GUIContent($" {name}");
+                    if (GUI.Button(rect, content))
+                    {
+                        EditorUtility.OpenWithDefaultApp(path);
                     }
                 }
             }
