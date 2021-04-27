@@ -144,6 +144,7 @@ namespace AssetBookmarks.Editor
             Open,
             Focus,
             Finder,
+            App,
         }
     }
 }

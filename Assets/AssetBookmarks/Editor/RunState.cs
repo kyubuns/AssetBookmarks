@@ -49,6 +49,10 @@ namespace AssetBookmarks.Editor
                                 EditorUtility.RevealInFinder(path);
                                 break;
 
+                            case OpenType.App:
+                                EditorUtility.OpenWithDefaultApp(path);
+                                break;
+
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
