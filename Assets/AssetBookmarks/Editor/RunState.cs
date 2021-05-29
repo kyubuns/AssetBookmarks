@@ -62,7 +62,7 @@ namespace AssetBookmarks.Editor
                 if (item is OutsideItem outsideItem)
                 {
                     var path = outsideItem.Path;
-                    var name = Path.GetFileName(path);
+                    var name = path;
                     var content = new GUIContent($" {name}");
                     if (GUI.Button(rect, content))
                     {
