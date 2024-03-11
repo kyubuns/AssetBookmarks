@@ -2,8 +2,6 @@
 
 An editor extension that allows you to register and display commonly use assets (scenes, SerializedObjects for settings, etc.).
 
-<a href="https://www.buymeacoffee.com/kyubuns" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-
 https://user-images.githubusercontent.com/961165/116014888-6079a700-a672-11eb-9e8e-55b342e3df0e.mov
 
 https://user-images.githubusercontent.com/961165/116175404-33e58e00-a74b-11eb-8dff-d2d6bbe20c50.mov
