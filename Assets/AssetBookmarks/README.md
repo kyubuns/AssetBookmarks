@@ -1,6 +1,6 @@
 # Asset Bookmarks
 
-Asset Bookmarks is a focused Unity Editor window for keeping project assets and files outside Unity one click away.
+Asset Bookmarks is a simple, lightweight bookmark window for Unity—keep project assets, files and folders outside your Unity project, and websites just one click away.
 
 Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic saving, resilient project-asset references, and migration from version 1.
 

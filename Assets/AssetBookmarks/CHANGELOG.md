@@ -27,6 +27,7 @@ All notable changes to Asset Bookmarks are documented in this file.
 - Save edits, additions, removals, and reorder operations immediately.
 - Clarified Unity asset actions and exposed the full stored path in each row.
 - Reused Unity's native Editor background and USS theme tokens instead of fixed light and dark color constants.
+- Reused virtualized list rows and avoided loading asset objects for display-only availability checks.
 
 ### Removed
 
