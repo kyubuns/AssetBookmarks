@@ -9,6 +9,7 @@ namespace AssetBookmarks.Editor
     {
         ProjectAsset,
         External,
+        Url,
     }
 
     internal enum BookmarkOpenMode
@@ -62,6 +63,11 @@ namespace AssetBookmarks.Editor
                     return "Untitled";
                 }
 
+                if (kind == BookmarkKind.Url)
+                {
+                    return GetUrlDisplayName(resolvedPath);
+                }
+
                 var trimmedPath = resolvedPath.TrimEnd('/', '\\');
                 var fileName = Path.GetFileName(trimmedPath);
                 if (string.IsNullOrEmpty(fileName))
@@ -84,6 +90,11 @@ namespace AssetBookmarks.Editor
                 {
                     return AssetDatabase.IsValidFolder(resolvedPath) ||
                            AssetDatabase.LoadMainAssetAtPath(resolvedPath) != null;
+                }
+
+                if (kind == BookmarkKind.Url)
+                {
+                    return TryNormalizeUrl(resolvedPath, out _);
                 }
 
                 return File.Exists(resolvedPath) || Directory.Exists(resolvedPath);
@@ -114,6 +125,18 @@ namespace AssetBookmarks.Editor
             };
         }
 
+        internal static Bookmark CreateUrl(string url)
+        {
+            return new Bookmark
+            {
+                id = Guid.NewGuid().ToString("N"),
+                path = url,
+                assetGuid = string.Empty,
+                kind = BookmarkKind.Url,
+                openMode = BookmarkOpenMode.DefaultApplication,
+            };
+        }
+
         internal void EnsureValidData()
         {
             if (string.IsNullOrEmpty(id))
@@ -121,7 +144,9 @@ namespace AssetBookmarks.Editor
                 id = Guid.NewGuid().ToString("N");
             }
 
-            path = path?.Replace('\\', '/') ?? string.Empty;
+            path = kind == BookmarkKind.Url
+                ? path?.Trim() ?? string.Empty
+                : path?.Replace('\\', '/') ?? string.Empty;
             assetGuid = assetGuid ?? string.Empty;
 
             if (kind == BookmarkKind.ProjectAsset && string.IsNullOrEmpty(assetGuid))
@@ -129,7 +154,12 @@ namespace AssetBookmarks.Editor
                 assetGuid = AssetDatabase.AssetPathToGUID(path);
             }
 
-            if (kind == BookmarkKind.External)
+            if (kind == BookmarkKind.Url && TryNormalizeUrl(path, out var normalizedUrl))
+            {
+                path = normalizedUrl;
+            }
+
+            if (kind == BookmarkKind.External || kind == BookmarkKind.Url)
             {
                 openMode = BookmarkOpenMode.DefaultApplication;
             }
@@ -158,6 +188,44 @@ namespace AssetBookmarks.Editor
             {
                 openMode = mode;
             }
+        }
+
+        internal static bool TryNormalizeUrl(string value, out string normalizedUrl)
+        {
+            normalizedUrl = string.Empty;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var candidate = value.Trim();
+            if (candidate.IndexOf("://", StringComparison.Ordinal) < 0)
+            {
+                candidate = $"https://{candidate}";
+            }
+
+            if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                string.IsNullOrEmpty(uri.Host))
+            {
+                return false;
+            }
+
+            normalizedUrl = uri.AbsoluteUri;
+            return true;
+        }
+
+        private static string GetUrlDisplayName(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return url;
+            }
+
+            var path = Uri.UnescapeDataString(uri.AbsolutePath).TrimEnd('/');
+            var separatorIndex = path.LastIndexOf('/');
+            var name = separatorIndex >= 0 ? path.Substring(separatorIndex + 1) : path;
+            return string.IsNullOrEmpty(name) ? uri.Host : $"{name} · {uri.Host}";
         }
     }
 }

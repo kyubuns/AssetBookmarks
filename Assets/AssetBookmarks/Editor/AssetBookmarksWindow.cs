@@ -95,6 +95,22 @@ namespace AssetBookmarks.Editor
             });
             toolbar.Add(searchField);
 
+            var addMenu = new ToolbarMenu { text = "+" };
+            addMenu.tooltip = "Add bookmark";
+            addMenu.AddToClassList("asset-bookmarks__add-button");
+            addMenu.menu.AppendAction(
+                "Selected Unity Assets",
+                _ => AddSelectedAssets(),
+                _ => HasSelectedAssets()
+                    ? DropdownMenuAction.Status.Normal
+                    : DropdownMenuAction.Status.Disabled);
+            addMenu.menu.AppendSeparator();
+            addMenu.menu.AppendAction("External File…", _ => AddExternalFile());
+            addMenu.menu.AppendAction("External Folder…", _ => AddExternalFolder());
+            addMenu.menu.AppendSeparator();
+            addMenu.menu.AppendAction("Website…", _ => AddWebsiteWindow.Show(this));
+            toolbar.Add(addMenu);
+
             var optionsMenu = new ToolbarMenu { text = "Aa" };
             optionsMenu.tooltip = "Display size";
             optionsMenu.AddToClassList("asset-bookmarks__options-button");
@@ -247,6 +263,52 @@ namespace AssetBookmarks.Editor
                 : AssetDatabase.LoadAssetAtPath<StyleSheet>($"{editorDirectory}/UI/AssetBookmarks.uss");
         }
 
+        private void AddSelectedAssets()
+        {
+            var paths = new List<string>();
+            foreach (var selectedObject in Selection.objects)
+            {
+                var path = AssetDatabase.GetAssetPath(selectedObject);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    paths.Add(path);
+                }
+            }
+
+            AddPaths(paths);
+        }
+
+        private static bool HasSelectedAssets()
+        {
+            foreach (var selectedObject in Selection.objects)
+            {
+                if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(selectedObject)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void AddExternalFile()
+        {
+            var path = EditorUtility.OpenFilePanel("Add External File", string.Empty, string.Empty);
+            if (!string.IsNullOrEmpty(path))
+            {
+                AddPaths(new[] { path });
+            }
+        }
+
+        private void AddExternalFolder()
+        {
+            var path = EditorUtility.OpenFolderPanel("Add External Folder", string.Empty, string.Empty);
+            if (!string.IsNullOrEmpty(path))
+            {
+                AddPaths(new[] { path });
+            }
+        }
+
         private void AddPaths(IEnumerable<string> paths)
         {
             var result = store.AddPaths(paths);
@@ -265,6 +327,18 @@ namespace AssetBookmarks.Editor
             {
                 ShowNotification(new GUIContent("No valid files or assets found."));
             }
+        }
+
+        internal BookmarkAddResult AddWebsite(string url)
+        {
+            var result = store.AddUrl(url);
+            if (result.Added > 0)
+            {
+                RefreshView();
+                ShowNotification(new GUIContent("Website bookmarked."));
+            }
+
+            return result;
         }
 
         private void RemoveBookmark(Bookmark bookmark)
@@ -507,6 +581,14 @@ namespace AssetBookmarks.Editor
                 if (bookmark.Kind == BookmarkKind.ProjectAsset)
                 {
                     return AssetDatabase.GetCachedIcon(bookmark.ResolvedPath);
+                }
+
+                if (bookmark.Kind == BookmarkKind.Url)
+                {
+                    var webIcon = EditorGUIUtility.IconContent("BuildSettings.Web.Small").image;
+                    return webIcon != null
+                        ? webIcon
+                        : EditorGUIUtility.IconContent("DefaultAsset Icon").image;
                 }
 
                 var iconName = Directory.Exists(bookmark.ResolvedPath) ? "Folder Icon" : "DefaultAsset Icon";

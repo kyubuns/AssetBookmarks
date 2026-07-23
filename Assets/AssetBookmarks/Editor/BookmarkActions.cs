@@ -14,6 +14,12 @@ namespace AssetBookmarks.Editor
             }
 
             var path = bookmark.ResolvedPath;
+            if (bookmark.Kind == BookmarkKind.Url)
+            {
+                Application.OpenURL(path);
+                return true;
+            }
+
             if (bookmark.Kind == BookmarkKind.External)
             {
                 EditorUtility.OpenWithDefaultApp(path);
@@ -44,7 +50,7 @@ namespace AssetBookmarks.Editor
 
         internal static string GetActionLabel(Bookmark bookmark)
         {
-            if (bookmark.Kind == BookmarkKind.External)
+            if (bookmark.Kind == BookmarkKind.External || bookmark.Kind == BookmarkKind.Url)
             {
                 return "Open";
             }

@@ -94,6 +94,24 @@ namespace AssetBookmarks.Editor
             return new BookmarkAddResult(added, duplicate, invalid);
         }
 
+        internal BookmarkAddResult AddUrl(string value)
+        {
+            if (!Bookmark.TryNormalizeUrl(value, out var normalizedUrl))
+            {
+                return new BookmarkAddResult(0, 0, 1);
+            }
+
+            var bookmark = Bookmark.CreateUrl(normalizedUrl);
+            if (Contains(bookmark))
+            {
+                return new BookmarkAddResult(0, 1, 0);
+            }
+
+            Items.Add(bookmark);
+            Save();
+            return new BookmarkAddResult(1, 0, 0);
+        }
+
         internal void Remove(Bookmark bookmark)
         {
             if (Items.Remove(bookmark))
@@ -236,7 +254,7 @@ namespace AssetBookmarks.Editor
 
         private static void Sanitize(List<Bookmark> items)
         {
-            var identities = new HashSet<string>(GetPathComparer());
+            var identities = new HashSet<string>(StringComparer.Ordinal);
             for (var index = items.Count - 1; index >= 0; index--)
             {
                 var item = items[index];
@@ -248,44 +266,43 @@ namespace AssetBookmarks.Editor
 
                 item.EnsureValidData();
                 var identity = GetIdentity(item);
-                if (string.IsNullOrEmpty(item.StoredPath) || !identities.Add(identity))
+                if (string.IsNullOrEmpty(item.StoredPath) ||
+                    string.IsNullOrEmpty(identity) ||
+                    !identities.Add(identity))
                 {
                     items.RemoveAt(index);
                 }
             }
-
         }
 
         private bool Contains(Bookmark candidate)
         {
             var candidateIdentity = GetIdentity(candidate);
-            var comparer = GetPathComparer();
-            foreach (var item in Items)
-            {
-                if (comparer.Equals(GetIdentity(item), candidateIdentity))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return Items.Exists(item =>
+                StringComparer.Ordinal.Equals(GetIdentity(item), candidateIdentity));
         }
 
         private static string GetIdentity(Bookmark bookmark)
         {
             if (bookmark.Kind == BookmarkKind.ProjectAsset && !string.IsNullOrEmpty(bookmark.AssetGuid))
             {
-                return $"asset:{bookmark.AssetGuid}";
+                return $"asset:{bookmark.AssetGuid.ToLowerInvariant()}";
             }
 
-            return $"{bookmark.Kind}:{bookmark.ResolvedPath}";
-        }
+            if (bookmark.Kind == BookmarkKind.Url)
+            {
+                return Bookmark.TryNormalizeUrl(bookmark.ResolvedPath, out var normalizedUrl)
+                    ? $"url:{normalizedUrl}"
+                    : string.Empty;
+            }
 
-        private static StringComparer GetPathComparer()
-        {
-            return Application.platform == RuntimePlatform.LinuxEditor
-                ? StringComparer.Ordinal
-                : StringComparer.OrdinalIgnoreCase;
+            var path = bookmark.ResolvedPath;
+            if (Application.platform != RuntimePlatform.LinuxEditor)
+            {
+                path = path.ToUpperInvariant();
+            }
+
+            return $"external:{path}";
         }
 
         private static bool TryCreateBookmark(string sourcePath, out Bookmark bookmark)
