@@ -2,26 +2,22 @@
 
 Asset Bookmarks is a simple, lightweight bookmark window for Unity—keep project assets, files and folders outside your Unity project, and websites just one click away.
 
+https://github.com/user-attachments/assets/2be31124-1b9c-4079-a260-695ae99c118b
+
+https://github.com/user-attachments/assets/3b518024-68bf-4d39-8dfc-016a8a57f9b6
+
 Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic saving, resilient project-asset references, and migration from version 1.
 
 ## Features
 
-- Bookmark assets and folders from `Assets` or `Packages`.
-- Bookmark files and folders anywhere on your computer.
-- Bookmark HTTP or HTTPS websites such as Jenkins jobs and open them in your default browser.
-- Drag one or more Unity assets, external files, or folders anywhere onto the window.
-- Use the compact **+** menu to add selected Unity assets, external files or folders, and websites.
-- Choose what a Unity asset does when clicked: select, open, reveal, or launch in its default application.
-- Filter bookmarks immediately by typing part of their name or path in the search field.
-- Drag a bookmarked Unity asset or external path into any compatible Unity Editor target using Unity's standard drag-and-drop payload.
-- Drag only the grip at the right edge of a row to reorder it.
-- Use the context menu to change actions, copy the current path, move, or remove a bookmark.
-- Switch the text, icon, and row height together with Small, Medium, and Large display presets.
-- Open newly added Scene assets in Unity by default; other Unity assets default to selection.
-- Keep bookmarks valid when Unity assets move or are renamed.
-- See missing targets without losing the bookmark unexpectedly.
-- Follow the active Unity Editor theme without maintaining separate fixed light and dark colors.
-- Store bookmarks locally per project; no project assets are modified.
+- Bookmark Unity assets, external files and folders, and websites such as Jenkins jobs.
+- Add bookmarks by drag and drop or from the compact **+** menu.
+- Search instantly by name or path.
+- Choose what happens when a Unity asset is clicked.
+- Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
+- Keep Unity asset bookmarks working after files are moved or renamed.
+- Reorder rows and choose from three compact display sizes.
+- Save changes automatically and locally for each project.
 
 ## Requirements
 
@@ -44,17 +40,17 @@ Open **Window > Asset Bookmarks**.
 Add bookmarks in either of these ways:
 
 - Drag assets from the Project window, or files and folders from Finder or Explorer, anywhere onto the window.
-- Open the **+** menu to add the current Unity selection, choose an external file or folder, or enter a website URL in a compact popup.
+- Use the **+** menu to add selected Unity assets, external files or folders, or a website.
 
-Website bookmarks support HTTP and HTTPS. If the scheme is omitted, Asset Bookmarks adds `https://`. URL availability is validated by format only, so opening the window never performs a network request.
+Website bookmarks support HTTP and HTTPS. If the scheme is omitted, `https://` is added automatically.
 
-Click a bookmark row to use it. Type in the search field to filter immediately by name or path. Right-click a row to change its Unity asset action, copy its current path, move it, or remove it. Changes are saved immediately.
+Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to change its action, copy its path, move it, or remove it.
 
-Drag the body of a row into another Unity window to start a standard Unity drag. Project assets carry the same object and project-relative path payload as a Project-window drag, so Prefabs can be placed in the Scene or Hierarchy and other asset types follow the behavior of the destination. External file and folder bookmarks provide their absolute path; website bookmarks are not draggable. The grip at the right edge remains dedicated to reordering.
+Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. External files and folders can also be dragged; websites cannot.
 
-When a Scene is added, its initial action is **Open in Unity**. Other Unity assets initially use **Select in Project**. Change either from the row's context menu.
+Drag the right-edge grip to reorder rows. Use **Aa** to choose Small, Medium, or Large.
 
-Use **Aa > Row Size** to choose Small, Medium, or Large. Small is the default and maximizes the number of visible bookmarks. The preference is saved locally.
+New Scene bookmarks use **Open in Unity** by default. Other Unity assets use **Select in Project**.
 
 ### Unity asset actions
 
@@ -67,14 +63,12 @@ Use **Aa > Row Size** to choose Small, Medium, or Large. Small is the default an
 
 External files and folders always open with their default application. Website bookmarks open in the default browser.
 
-## Data and migration
+## Storage
 
-Bookmarks are stored in `EditorPrefs`, scoped by the project's absolute path. They are local to the current user and are not committed with the Unity project. External bookmarks therefore remain machine-specific.
+Bookmarks are saved locally for each Unity project and are not committed with the project. External bookmarks are therefore specific to the current computer.
 
-Unity project assets and folders are stored by GUID, while their latest project-relative path is kept for display and missing-item recovery. This allows a bookmark to follow the asset when it is moved or renamed. `GlobalObjectId` is intentionally unnecessary while bookmarks target whole assets rather than sub-objects.
-
-The first time version 2 opens, it imports bookmarks from the version 1 key for the current project. The old value is left untouched so downgrading does not destroy existing data.
+Unity asset bookmarks follow moved or renamed assets. Existing version 1 bookmarks are imported automatically.
 
 ## License
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)
