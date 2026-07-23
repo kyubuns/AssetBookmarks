@@ -224,6 +224,27 @@
     -unity-font-style: bold;
 }
 
+.asset-bookmarks__status {
+    position: absolute;
+    left: 7px;
+    right: 4px;
+    top: 2px;
+    height: 19px;
+    min-height: 19px;
+    padding-left: 5px;
+    padding-right: 5px;
+    border-width: 1px;
+    border-radius: 3px;
+    background-color: var(--unity-colors-popup-background);
+    border-color: var(--unity-colors-default-border);
+    color: var(--unity-colors-default-text);
+    font-size: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-center;
+}
+
 .asset-bookmarks--size-medium .asset-bookmarks__toolbar {
     height: 27px;
     min-height: 27px;

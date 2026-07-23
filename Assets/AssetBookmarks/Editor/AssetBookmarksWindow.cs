@@ -11,6 +11,7 @@ namespace AssetBookmarks.Editor
     internal sealed class AssetBookmarksWindow : EditorWindow
     {
         private const string DisplaySizeKey = "AssetBookmarks.v2.display-size";
+        private const long StatusDurationMs = 2000;
 
         private readonly List<Bookmark> visibleItems = new List<Bookmark>();
 
@@ -19,6 +20,8 @@ namespace AssetBookmarks.Editor
         private VisualElement emptyState;
         private Label emptyLabel;
         private VisualElement dropOverlay;
+        private Label statusLabel;
+        private IVisualElementScheduledItem statusDismissal;
         private DisplaySize displaySize;
         private string searchQuery = string.Empty;
         private bool reorderHandlePressed;
@@ -45,6 +48,7 @@ namespace AssetBookmarks.Editor
         private void OnDisable()
         {
             EditorApplication.projectChanged -= OnProjectChanged;
+            statusDismissal?.Pause();
         }
 
         public void CreateGUI()
@@ -54,6 +58,8 @@ namespace AssetBookmarks.Editor
                 store = BookmarkStore.Load();
             }
 
+            statusDismissal?.Pause();
+            statusDismissal = null;
             rootVisualElement.Clear();
             rootVisualElement.AddToClassList("asset-bookmarks");
             AddDisplaySizeClass();
@@ -68,12 +74,13 @@ namespace AssetBookmarks.Editor
             rootVisualElement.Add(CreateToolbar());
             rootVisualElement.Add(CreateContent());
             rootVisualElement.Add(CreateDropOverlay());
+            rootVisualElement.Add(CreateStatusLabel());
             RefreshView();
 
             if (store.MigratedLegacyData)
             {
                 rootVisualElement.schedule.Execute(() =>
-                    ShowNotification(new GUIContent("Existing bookmarks were upgraded to version 2.")));
+                    ShowStatus("Existing bookmarks were upgraded to version 2."));
             }
         }
 
@@ -201,6 +208,29 @@ namespace AssetBookmarks.Editor
             return dropOverlay;
         }
 
+        private Label CreateStatusLabel()
+        {
+            statusLabel = new Label { pickingMode = PickingMode.Ignore };
+            statusLabel.AddToClassList("asset-bookmarks__status");
+            statusLabel.style.display = DisplayStyle.None;
+            return statusLabel;
+        }
+
+        private void ShowStatus(string message)
+        {
+            statusDismissal?.Pause();
+            statusLabel.text = message;
+            statusLabel.style.display = DisplayStyle.Flex;
+            statusLabel.BringToFront();
+            statusDismissal = statusLabel.schedule.Execute(HideStatus).StartingIn(StatusDurationMs);
+        }
+
+        private void HideStatus()
+        {
+            statusLabel.style.display = DisplayStyle.None;
+            statusDismissal = null;
+        }
+
         private void RegisterDropTarget()
         {
             rootVisualElement.RegisterCallback<DragUpdatedEvent>(evt =>
@@ -314,15 +344,15 @@ namespace AssetBookmarks.Editor
             if (result.Added > 0)
             {
                 var suffix = result.Added == 1 ? string.Empty : "s";
-                ShowNotification(new GUIContent($"Added {result.Added} bookmark{suffix}."));
+                ShowStatus($"Added {result.Added} bookmark{suffix}.");
             }
             else if (result.Duplicate > 0 && result.Invalid == 0)
             {
-                ShowNotification(new GUIContent("Already bookmarked."));
+                ShowStatus("Already bookmarked.");
             }
             else
             {
-                ShowNotification(new GUIContent("No valid files or assets found."));
+                ShowStatus("No valid files or assets found.");
             }
         }
 
@@ -332,7 +362,7 @@ namespace AssetBookmarks.Editor
             if (result.Added > 0)
             {
                 RefreshView();
-                ShowNotification(new GUIContent("Website bookmarked."));
+                ShowStatus("Website bookmarked.");
             }
 
             return result;
@@ -425,7 +455,7 @@ namespace AssetBookmarks.Editor
         {
             if (!BookmarkActions.Open(bookmark))
             {
-                ShowNotification(new GUIContent("The bookmarked item no longer exists."));
+                ShowStatus("The bookmarked item no longer exists.");
             }
         }
 

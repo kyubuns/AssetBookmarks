@@ -12,6 +12,10 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 - Set the minimum supported Editor version to Unity 6.3 without requiring a specific patch release.
 
+### Fixed
+
+- Kept status messages readable when the window is docked at a very small height.
+
 ## [2.1.0] - 2026-07-23
 
 ### Added

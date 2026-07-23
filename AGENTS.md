@@ -16,6 +16,7 @@
 - 右端グリップは `ListView` と `canStartDrag` を使う並べ替え専用、行本体はBookmark対象をUnity標準のドラッグpayloadとして外へ渡す。Asset種別ごとのdrop挙動は受け側へ委ね、Prefab専用処理は持たない。
 - Small、Medium、Largeの表示設定で文字、アイコン、行高をまとめて変える。
 - Editor背景は塗りつぶさずUnityのホスト背景を継承し、Bookmarkの色分け以外で色が必要な要素にはUnity USSテーマ変数を使う。
+- 一時的なステータスはリストの高さを消費せず、縦幅が狭い場合も読める1行のオーバーレイとして表示する。
 
 ## Data and actions
 
