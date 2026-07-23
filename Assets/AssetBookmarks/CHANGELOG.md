@@ -2,6 +2,13 @@
 
 All notable changes to Asset Bookmarks are documented in this file.
 
+## [2.1.0] - 2026-07-23
+
+### Added
+
+- Standard outgoing Unity drag-and-drop from bookmark rows for project assets, external files, and external folders.
+- Project-asset drag payloads that let compatible Editor targets handle Prefabs and other asset types exactly as they handle Project-window drags.
+
 ## [2.0.0] - 2026-07-23
 
 ### Added
