@@ -1,6 +1,6 @@
 {
     "name": "AssetBookmarks.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "AssetBookmarks.Editor",
     "references": [],
     "includePlatforms": [
         "Editor"

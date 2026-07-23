@@ -1,150 +1,464 @@
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using UnityEditor;
-using UnityEditorInternal;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace AssetBookmarks.Editor
 {
-    public partial class AssetBookmarksWindow : EditorWindow
+    internal sealed class AssetBookmarksWindow : EditorWindow
     {
+        private const string DisplaySizeKey = "AssetBookmarks.v2.display-size";
+
+        private BookmarkStore store;
+        private ListView listView;
+        private VisualElement emptyState;
+        private VisualElement dropOverlay;
+        private Label countLabel;
+        private DisplaySize displaySize;
+
         [MenuItem("Window/Asset Bookmarks")]
-        public static void ShowWindow()
+        private static void ShowWindow()
         {
-            GetWindow<AssetBookmarksWindow>(utility: false, title: "Asset Bookmarks", focus: true);
+            var window = GetWindow<AssetBookmarksWindow>();
+            window.titleContent = new GUIContent("Asset Bookmarks");
+            window.minSize = new Vector2(220f, 120f);
+            window.Show();
         }
 
-        private IWindowState _state;
-
-        public void OnEnable()
+        private void OnEnable()
         {
-            var model = new Model();
-            _state = new RunState(model);
-            model.ReorderableList.drawElementCallback += DrawElementCallback;
-            model.ReorderableList.drawElementBackgroundCallback += DrawElementBackgroundCallback;
+            titleContent = new GUIContent("Asset Bookmarks");
+            minSize = new Vector2(220f, 120f);
+            displaySize = LoadDisplaySize();
+            store = BookmarkStore.Load();
+            EditorApplication.projectChanged -= OnProjectChanged;
+            EditorApplication.projectChanged += OnProjectChanged;
         }
 
-        private void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused)
+        private void OnDisable()
         {
-            _state.DrawElementCallback(rect, index, isActive, isFocused);
+            EditorApplication.projectChanged -= OnProjectChanged;
         }
 
-        private void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused)
+        public void CreateGUI()
         {
-            _state.DrawElementBackgroundCallback(rect, index, isActive, isFocused);
-        }
-
-        public void OnGUI()
-        {
-            var nextState = _state.OnGui();
-            if (nextState != null)
+            if (store == null)
             {
-                _state.Dispose();
-                _state = nextState;
+                store = BookmarkStore.Load();
+            }
+
+            rootVisualElement.Clear();
+            rootVisualElement.AddToClassList("asset-bookmarks");
+            rootVisualElement.AddToClassList(EditorGUIUtility.isProSkin
+                ? "asset-bookmarks--dark"
+                : "asset-bookmarks--light");
+            AddDisplaySizeClass();
+
+            var styleSheet = LoadStyleSheet();
+            if (styleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(styleSheet);
+            }
+
+            RegisterDropTarget();
+            rootVisualElement.Add(CreateToolbar());
+            rootVisualElement.Add(CreateContent());
+            rootVisualElement.Add(CreateDropOverlay());
+            RefreshView();
+
+            if (store.MigratedLegacyData)
+            {
+                rootVisualElement.schedule.Execute(() =>
+                    ShowNotification(new GUIContent("Existing bookmarks were upgraded to version 2.")));
             }
         }
 
-        private class Model
+        private VisualElement CreateToolbar()
         {
-            public Model()
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList("asset-bookmarks__toolbar");
+
+            countLabel = new Label();
+            countLabel.AddToClassList("asset-bookmarks__count");
+            toolbar.Add(countLabel);
+
+            var optionsMenu = new ToolbarMenu { text = "Aa" };
+            optionsMenu.tooltip = "Display size";
+            optionsMenu.AddToClassList("asset-bookmarks__options-button");
+            AppendDisplaySizeOption(optionsMenu, DisplaySize.Small);
+            AppendDisplaySizeOption(optionsMenu, DisplaySize.Medium);
+            AppendDisplaySizeOption(optionsMenu, DisplaySize.Large);
+            toolbar.Add(optionsMenu);
+
+            return toolbar;
+        }
+
+        private void AppendDisplaySizeOption(ToolbarMenu menu, DisplaySize size)
+        {
+            menu.menu.AppendAction(
+                $"Row Size/{size}",
+                _ => SetDisplaySize(size),
+                _ => displaySize == size
+                    ? DropdownMenuAction.Status.Checked
+                    : DropdownMenuAction.Status.Normal);
+        }
+
+        private VisualElement CreateContent()
+        {
+            var content = new VisualElement();
+            content.AddToClassList("asset-bookmarks__content");
+
+            listView = new ListView
             {
-                Items = new List<IItem>();
-                ReorderableList = new ReorderableList(
-                    elements: Items,
-                    elementType: typeof(string),
-                    draggable: false,
-                    displayHeader: false,
-                    displayAddButton: false,
-                    displayRemoveButton: false
-                );
+                itemsSource = store.Items,
+                fixedItemHeight = GetRowHeight(displaySize),
+                selectionType = SelectionType.None,
+                reorderable = store.Items.Count > 1,
+                reorderMode = ListViewReorderMode.Simple,
+                showAlternatingRowBackgrounds = AlternatingRowBackground.None,
+                showBorder = false,
+                makeItem = () => new BookmarkRow(this),
+                bindItem = (element, index) =>
+                    ((BookmarkRow)element).Bind(store.Items[index]),
+            };
+            listView.AddToClassList("asset-bookmarks__list");
+            listView.itemIndexChanged += (_, _) =>
+            {
+                store.Save();
+                RefreshView();
+            };
+            content.Add(listView);
 
-                var elements = EditorPrefs.GetString(PlayerPrefsKey, "").Split(',');
-                foreach (var element in elements)
+            emptyState = new VisualElement();
+            emptyState.AddToClassList("asset-bookmarks__empty");
+
+            var emptyLabel = new Label("Drop assets, files, or folders here");
+            emptyLabel.AddToClassList("asset-bookmarks__empty-label");
+            emptyState.Add(emptyLabel);
+            content.Add(emptyState);
+
+            return content;
+        }
+
+        private VisualElement CreateDropOverlay()
+        {
+            dropOverlay = new VisualElement { pickingMode = PickingMode.Ignore };
+            dropOverlay.AddToClassList("asset-bookmarks__drop-overlay");
+
+            var label = new Label("Drop to bookmark");
+            label.AddToClassList("asset-bookmarks__drop-overlay-label");
+            dropOverlay.Add(label);
+            return dropOverlay;
+        }
+
+        private void RegisterDropTarget()
+        {
+            rootVisualElement.RegisterCallback<DragUpdatedEvent>(evt =>
+            {
+                if (!HasDraggedPaths())
                 {
-                    var e = element.Split('|');
+                    return;
+                }
 
-                    if (e.Length == 2 && Enum.TryParse<OpenType>(e[1], out var t))
-                    {
-                        Items.Add(new ProjectItem(e[0], t));
-                    }
+                DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+                SetDropOverlayVisible(true);
+                evt.StopPropagation();
+            }, TrickleDown.TrickleDown);
 
-                    if (e.Length == 2 && e[0] == "o")
+            rootVisualElement.RegisterCallback<DragLeaveEvent>(_ => SetDropOverlayVisible(false));
+            rootVisualElement.RegisterCallback<DragExitedEvent>(_ => SetDropOverlayVisible(false));
+
+            rootVisualElement.RegisterCallback<DragPerformEvent>(evt =>
+            {
+                if (!HasDraggedPaths())
+                {
+                    return;
+                }
+
+                DragAndDrop.AcceptDrag();
+                SetDropOverlayVisible(false);
+                AddPaths(DragAndDrop.paths);
+                evt.StopPropagation();
+            }, TrickleDown.TrickleDown);
+        }
+
+        private static bool HasDraggedPaths()
+        {
+            return DragAndDrop.paths != null && DragAndDrop.paths.Length > 0;
+        }
+
+        private void SetDropOverlayVisible(bool visible)
+        {
+            if (dropOverlay != null)
+            {
+                dropOverlay.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        private StyleSheet LoadStyleSheet()
+        {
+            var script = MonoScript.FromScriptableObject(this);
+            var scriptPath = AssetDatabase.GetAssetPath(script);
+            if (string.IsNullOrEmpty(scriptPath))
+            {
+                return null;
+            }
+
+            var editorDirectory = Path.GetDirectoryName(scriptPath)?.Replace('\\', '/');
+            return string.IsNullOrEmpty(editorDirectory)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<StyleSheet>($"{editorDirectory}/UI/AssetBookmarks.uss");
+        }
+
+        private void AddPaths(IEnumerable<string> paths)
+        {
+            var result = store.AddPaths(paths);
+            RefreshView();
+
+            if (result.Added > 0)
+            {
+                var suffix = result.Added == 1 ? string.Empty : "s";
+                ShowNotification(new GUIContent($"Added {result.Added} bookmark{suffix}."));
+            }
+            else if (result.Duplicate > 0 && result.Invalid == 0)
+            {
+                ShowNotification(new GUIContent("Already bookmarked."));
+            }
+            else
+            {
+                ShowNotification(new GUIContent("No valid files or assets found."));
+            }
+        }
+
+        private void RemoveBookmark(Bookmark bookmark)
+        {
+            store.Remove(bookmark);
+            RefreshView();
+        }
+
+        private void SetOpenMode(Bookmark bookmark, BookmarkOpenMode mode)
+        {
+            bookmark.SetOpenMode(mode);
+            store.Save();
+            RefreshView();
+        }
+
+        private void MoveBookmark(Bookmark bookmark, int offset)
+        {
+            var currentIndex = store.Items.IndexOf(bookmark);
+            var nextIndex = currentIndex + offset;
+            if (currentIndex < 0 || nextIndex < 0 || nextIndex >= store.Items.Count)
+            {
+                return;
+            }
+
+            store.Items.RemoveAt(currentIndex);
+            store.Items.Insert(nextIndex, bookmark);
+            store.Save();
+            RefreshView();
+        }
+
+        private void SetDisplaySize(DisplaySize size)
+        {
+            if (displaySize == size)
+            {
+                return;
+            }
+
+            displaySize = size;
+            EditorPrefs.SetInt(DisplaySizeKey, (int)displaySize);
+            rootVisualElement.RemoveFromClassList("asset-bookmarks--size-small");
+            rootVisualElement.RemoveFromClassList("asset-bookmarks--size-medium");
+            rootVisualElement.RemoveFromClassList("asset-bookmarks--size-large");
+            AddDisplaySizeClass();
+            listView.fixedItemHeight = GetRowHeight(displaySize);
+            listView.Rebuild();
+        }
+
+        private void AddDisplaySizeClass()
+        {
+            rootVisualElement.AddToClassList($"asset-bookmarks--size-{displaySize.ToString().ToLowerInvariant()}");
+        }
+
+        private static DisplaySize LoadDisplaySize()
+        {
+            var savedValue = EditorPrefs.GetInt(DisplaySizeKey, (int)DisplaySize.Small);
+            return System.Enum.IsDefined(typeof(DisplaySize), savedValue)
+                ? (DisplaySize)savedValue
+                : DisplaySize.Small;
+        }
+
+        private static float GetRowHeight(DisplaySize size)
+        {
+            switch (size)
+            {
+                case DisplaySize.Medium:
+                    return 28f;
+                case DisplaySize.Large:
+                    return 36f;
+                default:
+                    return 22f;
+            }
+        }
+
+        private void OpenBookmark(Bookmark bookmark)
+        {
+            if (!BookmarkActions.Open(bookmark))
+            {
+                ShowNotification(new GUIContent("The bookmarked item no longer exists."));
+            }
+        }
+
+        private void OnProjectChanged()
+        {
+            store?.RefreshProjectPaths();
+            RefreshView();
+        }
+
+        private void RefreshView()
+        {
+            if (listView == null)
+            {
+                return;
+            }
+
+            var itemCount = store.Items.Count;
+            countLabel.text = itemCount == 1 ? "1 bookmark" : $"{itemCount} bookmarks";
+            listView.reorderable = itemCount > 1;
+            listView.style.display = itemCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            emptyState.style.display = itemCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            listView.Rebuild();
+        }
+
+        private sealed class BookmarkRow : VisualElement
+        {
+            private static readonly BookmarkOpenMode[] OpenModes =
+            {
+                BookmarkOpenMode.Select,
+                BookmarkOpenMode.Open,
+                BookmarkOpenMode.Reveal,
+                BookmarkOpenMode.DefaultApplication,
+            };
+
+            private readonly AssetBookmarksWindow window;
+            private readonly Image icon;
+            private readonly Label nameLabel;
+            private readonly Label actionLabel;
+            private readonly Label missingLabel;
+
+            private Bookmark bookmark;
+
+            internal BookmarkRow(AssetBookmarksWindow window)
+            {
+                this.window = window;
+                AddToClassList("asset-bookmarks__row");
+
+                icon = new Image { scaleMode = ScaleMode.ScaleToFit };
+                icon.AddToClassList("asset-bookmarks__row-icon");
+                Add(icon);
+
+                nameLabel = new Label();
+                nameLabel.AddToClassList("asset-bookmarks__row-name");
+                Add(nameLabel);
+
+                missingLabel = new Label("!");
+                missingLabel.tooltip = "The bookmarked item is missing.";
+                missingLabel.AddToClassList("asset-bookmarks__missing");
+                Add(missingLabel);
+
+                actionLabel = new Label();
+                actionLabel.AddToClassList("asset-bookmarks__row-action");
+                Add(actionLabel);
+
+                this.AddManipulator(new Clickable(() => window.OpenBookmark(bookmark)));
+                this.AddManipulator(new ContextualMenuManipulator(PopulateContextMenu));
+            }
+
+            internal void Bind(Bookmark item)
+            {
+                bookmark = item;
+                var available = item.IsAvailable;
+                var resolvedPath = item.ResolvedPath;
+
+                tooltip = resolvedPath;
+                nameLabel.text = item.DisplayName;
+                nameLabel.tooltip = resolvedPath;
+                actionLabel.text = BookmarkActions.GetActionLabel(item);
+                icon.image = GetIcon(item, available);
+                missingLabel.style.display = available ? DisplayStyle.None : DisplayStyle.Flex;
+                EnableInClassList("asset-bookmarks__row--missing", !available);
+            }
+
+            private void PopulateContextMenu(ContextualMenuPopulateEvent evt)
+            {
+                if (bookmark == null)
+                {
+                    return;
+                }
+
+                evt.menu.AppendAction(
+                    BookmarkActions.GetActionLabel(bookmark),
+                    _ => window.OpenBookmark(bookmark),
+                    _ => bookmark.IsAvailable
+                        ? DropdownMenuAction.Status.Normal
+                        : DropdownMenuAction.Status.Disabled);
+
+                if (bookmark.Kind == BookmarkKind.ProjectAsset)
+                {
+                    evt.menu.AppendSeparator();
+                    foreach (var mode in OpenModes)
                     {
-                        Items.Add(new OutsideItem(e[1]));
+                        var capturedMode = mode;
+                        evt.menu.AppendAction(
+                            $"Action/{BookmarkActions.GetModeLabel(capturedMode)}",
+                            _ => window.SetOpenMode(bookmark, capturedMode),
+                            _ => bookmark.OpenMode == capturedMode
+                                ? DropdownMenuAction.Status.Checked
+                                : DropdownMenuAction.Status.Normal);
                     }
                 }
+
+                evt.menu.AppendSeparator();
+                evt.menu.AppendAction(
+                    "Move Up",
+                    _ => window.MoveBookmark(bookmark, -1),
+                    _ => window.store.Items.IndexOf(bookmark) > 0
+                        ? DropdownMenuAction.Status.Normal
+                        : DropdownMenuAction.Status.Disabled);
+                evt.menu.AppendAction(
+                    "Move Down",
+                    _ => window.MoveBookmark(bookmark, 1),
+                    _ => window.store.Items.IndexOf(bookmark) < window.store.Items.Count - 1
+                        ? DropdownMenuAction.Status.Normal
+                        : DropdownMenuAction.Status.Disabled);
+                evt.menu.AppendSeparator();
+                evt.menu.AppendAction("Remove Bookmark", _ => window.RemoveBookmark(bookmark));
             }
 
-            public List<IItem> Items { get; }
-            public ReorderableList ReorderableList { get; }
-
-            private static string PlayerPrefsKey => $"AssetBookmarks{Application.productName}";
-
-            public void Save()
+            private static Texture GetIcon(Bookmark bookmark, bool available)
             {
-                var stringBuilder = new StringBuilder();
-                foreach (var item in Items) item.Serialize(stringBuilder);
-                EditorPrefs.SetString(PlayerPrefsKey, stringBuilder.ToString());
+                if (!available)
+                {
+                    return EditorGUIUtility.IconContent("console.warnicon.sml").image;
+                }
+
+                if (bookmark.Kind == BookmarkKind.ProjectAsset)
+                {
+                    return AssetDatabase.GetCachedIcon(bookmark.ResolvedPath);
+                }
+
+                var iconName = Directory.Exists(bookmark.ResolvedPath) ? "Folder Icon" : "DefaultAsset Icon";
+                return EditorGUIUtility.IconContent(iconName).image;
             }
         }
 
-        private interface IItem
+        private enum DisplaySize
         {
-            void Serialize(StringBuilder stringBuilder);
-        }
-
-        private class ProjectItem : IItem
-        {
-            public ProjectItem(string path, OpenType openType)
-            {
-                Path = path;
-                OpenType = openType;
-            }
-
-            public void Serialize(StringBuilder stringBuilder)
-            {
-                stringBuilder.Append(Path);
-                stringBuilder.Append("|");
-                stringBuilder.Append(OpenType);
-                stringBuilder.Append(",");
-            }
-
-            public string Path { get; }
-            public OpenType OpenType { get; set; }
-        }
-
-        private class OutsideItem : IItem
-        {
-            public OutsideItem(string path)
-            {
-                Path = path;
-            }
-
-            public void Serialize(StringBuilder stringBuilder)
-            {
-                stringBuilder.Append("o");
-                stringBuilder.Append("|");
-                stringBuilder.Append(Path);
-                stringBuilder.Append(",");
-            }
-
-            public string Path { get; }
-        }
-
-        private interface IWindowState : IDisposable
-        {
-            IWindowState OnGui();
-            void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused);
-            void DrawElementBackgroundCallback(Rect rect, int index, bool isActive, bool isFocused);
-        }
-
-        private enum OpenType
-        {
-            Open,
-            Focus,
-            Finder,
-            App,
+            Small,
+            Medium,
+            Large,
         }
     }
 }
