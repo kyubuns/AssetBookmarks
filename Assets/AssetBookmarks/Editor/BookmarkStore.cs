@@ -302,7 +302,7 @@ namespace AssetBookmarks.Editor
                     return false;
                 }
 
-                bookmark = Bookmark.CreateProjectAsset(assetPath, BookmarkOpenMode.Select);
+                bookmark = Bookmark.CreateProjectAsset(assetPath, GetDefaultOpenMode(assetPath));
                 return true;
             }
 
@@ -314,6 +314,13 @@ namespace AssetBookmarks.Editor
 
             bookmark = Bookmark.CreateExternal(externalPath);
             return true;
+        }
+
+        internal static BookmarkOpenMode GetDefaultOpenMode(string assetPath)
+        {
+            return AssetDatabase.GetMainAssetTypeAtPath(assetPath) == typeof(SceneAsset)
+                ? BookmarkOpenMode.Open
+                : BookmarkOpenMode.Select;
         }
 
         private static bool IsProjectAssetPath(string path)

@@ -1,0 +1,21 @@
+{
+  "name": "AssetBookmarks.Editor.Tests",
+  "rootNamespace": "AssetBookmarks.Editor.Tests",
+  "references": [
+    "AssetBookmarks.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
