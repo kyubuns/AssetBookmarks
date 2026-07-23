@@ -1,16 +1,24 @@
 {
   "name": "dev.kyubuns.assetbookmarks",
-  "displayName": "AssetBookmarks",
-  "version": "1.0.0",
-  "unity": "2020.3",
-  "description": "Asset Bookmarks",
+  "displayName": "Asset Bookmarks",
+  "version": "2.0.0",
+  "unity": "6000.3",
+  "unityRelease": "11f1",
+  "description": "A focused UI Toolkit window for bookmarking Unity assets and files or folders outside the project.",
   "documentationUrl": "https://github.com/kyubuns/AssetBookmarks",
-  "dependencies": {
-  },
+  "changelogUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/CHANGELOG.md",
+  "licensesUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/LICENSE.md",
+  "keywords": [
+    "editor",
+    "bookmark",
+    "productivity",
+    "ui-toolkit"
+  ],
+  "dependencies": {},
   "author": {
     "name": "kyubuns",
     "email": "kyubuns@gmail.com",
     "url": "https://kyubuns.dev/"
   },
-  "type": "library"
+  "type": "tool"
 }

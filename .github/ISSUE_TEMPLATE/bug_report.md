@@ -21,4 +21,6 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment**
-Version: x.x.x or hash
+- Asset Bookmarks version or commit:
+- Unity version:
+- Operating system:
