@@ -535,6 +535,7 @@ namespace AssetBookmarks.Editor
                     _ => bookmark.IsAvailable
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
+                evt.menu.AppendAction("Copy Path", _ => GUIUtility.systemCopyBuffer = bookmark.ResolvedPath);
 
                 if (bookmark.Kind == BookmarkKind.ProjectAsset)
                 {
