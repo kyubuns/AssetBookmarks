@@ -56,9 +56,6 @@ namespace AssetBookmarks.Editor
 
             rootVisualElement.Clear();
             rootVisualElement.AddToClassList("asset-bookmarks");
-            rootVisualElement.AddToClassList(EditorGUIUtility.isProSkin
-                ? "asset-bookmarks--dark"
-                : "asset-bookmarks--light");
             AddDisplaySizeClass();
 
             var styleSheet = LoadStyleSheet();
@@ -394,7 +391,7 @@ namespace AssetBookmarks.Editor
         private static DisplaySize LoadDisplaySize()
         {
             var savedValue = EditorPrefs.GetInt(DisplaySizeKey, (int)DisplaySize.Small);
-            return System.Enum.IsDefined(typeof(DisplaySize), savedValue)
+            return Enum.IsDefined(typeof(DisplaySize), savedValue)
                 ? (DisplaySize)savedValue
                 : DisplaySize.Small;
         }

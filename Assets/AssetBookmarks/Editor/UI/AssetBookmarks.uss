@@ -1,93 +1,87 @@
 .asset-bookmarks {
     flex-grow: 1;
-}
-
-.asset-bookmarks--dark {
-    background-color: rgb(31, 33, 38);
-    color: rgb(218, 221, 227);
-}
-
-.asset-bookmarks--light {
-    background-color: rgb(246, 247, 249);
-    color: rgb(42, 45, 51);
+    color: var(--unity-colors-default-text);
 }
 
 .asset-bookmarks__toolbar {
     height: 23px;
     min-height: 23px;
+    min-width: 0;
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
     padding-left: 7px;
     padding-right: 4px;
     border-bottom-width: 1px;
-}
-
-.asset-bookmarks--dark .asset-bookmarks__toolbar {
-    background-color: rgb(37, 39, 44);
-    border-bottom-color: rgb(53, 56, 63);
-}
-
-.asset-bookmarks--light .asset-bookmarks__toolbar {
-    background-color: rgb(252, 252, 253);
-    border-bottom-color: rgb(216, 218, 223);
-}
-
-.asset-bookmarks__count {
-    flex-grow: 1;
-    font-size: 10px;
+    background-color: var(--unity-colors-toolbar-background);
+    border-bottom-color: var(--unity-colors-toolbar-border);
 }
 
 .asset-bookmarks__search {
     flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    width: 0;
     min-width: 0;
     height: 18px;
     min-height: 18px;
     margin-right: 3px;
 }
 
-.asset-bookmarks--dark .asset-bookmarks__count,
-.asset-bookmarks--dark .asset-bookmarks__row-action,
-.asset-bookmarks--dark .asset-bookmarks__empty-label {
-    color: rgb(145, 149, 159);
+.asset-bookmarks__row-action,
+.asset-bookmarks__empty-label {
+    color: var(--unity-colors-label-text);
+    opacity: 0.72;
 }
 
-.asset-bookmarks--light .asset-bookmarks__count,
-.asset-bookmarks--light .asset-bookmarks__row-action,
-.asset-bookmarks--light .asset-bookmarks__empty-label {
-    color: rgb(104, 108, 117);
-}
-
+.asset-bookmarks__add-button,
 .asset-bookmarks__options-button {
-    width: 28px;
-    min-width: 28px;
+    position: relative;
+    flex-shrink: 0;
     height: 18px;
     min-height: 18px;
     padding: 0;
     margin: 0;
     border-width: 0;
     border-radius: 3px;
-    font-size: 10px;
-    -unity-font-style: normal;
+    background-color: var(--unity-colors-button-background);
+    color: var(--unity-colors-button-text);
     -unity-text-align: middle-center;
 }
 
-.asset-bookmarks--dark .asset-bookmarks__options-button {
-    background-color: rgb(49, 52, 59);
-    color: rgb(211, 214, 221);
+.asset-bookmarks__add-button .unity-toolbar-menu__text,
+.asset-bookmarks__options-button .unity-toolbar-menu__text {
+    position: absolute;
+    left: 0;
+    right: 14px;
+    top: 0;
+    bottom: 0;
+    -unity-text-align: middle-center;
 }
 
-.asset-bookmarks--dark .asset-bookmarks__options-button:hover {
-    background-color: rgb(61, 65, 74);
+.asset-bookmarks__add-button .unity-toolbar-menu__arrow,
+.asset-bookmarks__options-button .unity-toolbar-menu__arrow {
+    margin-left: auto;
+    margin-right: 2px;
 }
 
-.asset-bookmarks--light .asset-bookmarks__options-button {
-    background-color: rgb(231, 233, 237);
-    color: rgb(56, 59, 66);
+.asset-bookmarks__add-button {
+    width: 30px;
+    min-width: 30px;
+    font-size: 14px;
+    -unity-font-style: bold;
 }
 
-.asset-bookmarks--light .asset-bookmarks__options-button:hover {
-    background-color: rgb(216, 219, 225);
+.asset-bookmarks__options-button {
+    width: 36px;
+    min-width: 36px;
+    font-size: 10px;
+    -unity-font-style: normal;
+}
+
+.asset-bookmarks__add-button:hover,
+.asset-bookmarks__options-button:hover {
+    background-color: var(--unity-colors-button-background-hover);
 }
 
 .asset-bookmarks__content,
@@ -136,22 +130,11 @@
     padding-left: 5px;
     padding-right: 5px;
     border-bottom-width: 1px;
+    border-bottom-color: var(--unity-colors-default-border);
 }
 
-.asset-bookmarks--dark .asset-bookmarks__row {
-    border-bottom-color: rgb(43, 46, 52);
-}
-
-.asset-bookmarks--dark .asset-bookmarks__row:hover {
-    background-color: rgb(45, 48, 55);
-}
-
-.asset-bookmarks--light .asset-bookmarks__row {
-    border-bottom-color: rgb(231, 233, 237);
-}
-
-.asset-bookmarks--light .asset-bookmarks__row:hover {
-    background-color: rgb(232, 235, 241);
+.asset-bookmarks__row:hover {
+    background-color: var(--unity-colors-list_view_item-background-hover);
 }
 
 .asset-bookmarks__row--missing {
@@ -189,8 +172,8 @@
     flex-shrink: 0;
     margin-left: 3px;
     border-radius: 2px;
-    background-color: rgba(223, 143, 48, 0.18);
-    color: rgb(224, 148, 58);
+    background-color: var(--unity-colors-box-background);
+    color: var(--unity-colors-warning-text);
     font-size: 9px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
@@ -220,15 +203,15 @@
     justify-content: center;
     border-width: 1px;
     border-radius: 4px;
-    background-color: rgba(67, 89, 218, 0.78);
-    border-color: rgb(130, 146, 241);
+    background-color: var(--unity-colors-highlight-background);
+    border-color: var(--unity-colors-highlight-background-hover);
 }
 
 .asset-bookmarks__drop-overlay-label {
     padding: 4px 8px 4px 8px;
     border-radius: 3px;
-    background-color: rgba(22, 27, 48, 0.8);
-    color: white;
+    background-color: var(--unity-colors-popup-background);
+    color: var(--unity-colors-default-text);
     font-size: 11px;
     -unity-font-style: bold;
 }
@@ -238,13 +221,21 @@
     min-height: 27px;
 }
 
-.asset-bookmarks--size-medium .asset-bookmarks__count {
-    font-size: 11px;
+.asset-bookmarks--size-medium .asset-bookmarks__search {
+    height: 20px;
+    min-height: 20px;
+}
+
+.asset-bookmarks--size-medium .asset-bookmarks__add-button {
+    width: 32px;
+    min-width: 32px;
+    height: 20px;
+    min-height: 20px;
 }
 
 .asset-bookmarks--size-medium .asset-bookmarks__options-button {
-    width: 30px;
-    min-width: 30px;
+    width: 40px;
+    min-width: 40px;
     height: 20px;
     min-height: 20px;
     font-size: 11px;
@@ -273,13 +264,22 @@
     min-height: 31px;
 }
 
-.asset-bookmarks--size-large .asset-bookmarks__count {
-    font-size: 12px;
+.asset-bookmarks--size-large .asset-bookmarks__search {
+    height: 24px;
+    min-height: 24px;
+}
+
+.asset-bookmarks--size-large .asset-bookmarks__add-button {
+    width: 36px;
+    min-width: 36px;
+    height: 24px;
+    min-height: 24px;
+    font-size: 15px;
 }
 
 .asset-bookmarks--size-large .asset-bookmarks__options-button {
-    width: 34px;
-    min-width: 34px;
+    width: 44px;
+    min-width: 44px;
     height: 24px;
     min-height: 24px;
     font-size: 12px;
