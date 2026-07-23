@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "unity": "6000.3",
   "unityRelease": "11f1",
-  "description": "A focused UI Toolkit window for bookmarking Unity assets and files or folders outside the project.",
+  "description": "A focused UI Toolkit window for bookmarking Unity assets, external paths, and websites.",
   "documentationUrl": "https://github.com/kyubuns/AssetBookmarks",
   "changelogUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/CHANGELOG.md",
   "licensesUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/LICENSE.md",
@@ -12,6 +12,7 @@
     "editor",
     "bookmark",
     "productivity",
+    "url",
     "ui-toolkit"
   ],
   "dependencies": {},
