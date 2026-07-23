@@ -8,6 +8,10 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 - Per-bookmark row colors with seven presets and a **No Color** option in the context menu.
 
+### Changed
+
+- Set the minimum supported Editor version to Unity 6.3 without requiring a specific patch release.
+
 ## [2.1.0] - 2026-07-23
 
 ### Added

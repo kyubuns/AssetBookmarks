@@ -21,7 +21,7 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 
 ## Requirements
 
-- Unity 6000.3.11f1 or newer in the Unity 6000.3 release line.
+- Unity 6.3 (6000.3) or newer.
 
 ## Installation
 
