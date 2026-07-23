@@ -440,7 +440,7 @@ namespace AssetBookmarks.Editor
             listView.reorderable = visibleCount > 1;
             listView.style.display = visibleCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             emptyState.style.display = visibleCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            listView.Rebuild();
+            listView.RefreshItems();
         }
 
         private void RebuildVisibleItems()
