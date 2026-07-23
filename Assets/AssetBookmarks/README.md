@@ -37,8 +37,6 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
    https://github.com/kyubuns/AssetBookmarks.git?path=Assets/AssetBookmarks
    ```
 
-To pin a release, append a Git tag such as `#2.1.0` to the URL.
-
 ## Usage
 
 Open **Window > Asset Bookmarks**.
