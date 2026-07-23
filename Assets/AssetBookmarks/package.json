@@ -1,7 +1,7 @@
 {
   "name": "dev.kyubuns.assetbookmarks",
   "displayName": "Asset Bookmarks",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "unity": "6000.3",
   "description": "A focused UI Toolkit window for bookmarking Unity assets, external paths, and websites.",
   "documentationUrl": "https://github.com/kyubuns/AssetBookmarks",
