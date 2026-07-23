@@ -13,6 +13,7 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 - Use the compact **+** menu to add selected Unity assets, external files or folders, and websites.
 - Choose what a Unity asset does when clicked: select, open, reveal, or launch in its default application.
 - Filter bookmarks immediately by typing part of their name or path in the search field.
+- Drag a bookmarked Unity asset or external path into any compatible Unity Editor target using Unity's standard drag-and-drop payload.
 - Drag only the grip at the right edge of a row to reorder it.
 - Use the context menu to change actions, copy the current path, move, or remove a bookmark.
 - Switch the text, icon, and row height together with Small, Medium, and Large display presets.
@@ -49,7 +50,9 @@ Add bookmarks in either of these ways:
 
 Website bookmarks support HTTP and HTTPS. If the scheme is omitted, Asset Bookmarks adds `https://`. URL availability is validated by format only, so opening the window never performs a network request.
 
-Click a bookmark row to use it. Type in the search field to filter immediately by name or path. Drag the grip at the right edge of a row to reorder it; dragging the rest of the row does not reorder. Right-click a row to change its Unity asset action, copy its current path, move it, or remove it. Changes are saved immediately.
+Click a bookmark row to use it. Type in the search field to filter immediately by name or path. Right-click a row to change its Unity asset action, copy its current path, move it, or remove it. Changes are saved immediately.
+
+Drag the body of a row into another Unity window to start a standard Unity drag. Project assets carry the same object and project-relative path payload as a Project-window drag, so Prefabs can be placed in the Scene or Hierarchy and other asset types follow the behavior of the destination. External file and folder bookmarks provide their absolute path; website bookmarks are not draggable. The grip at the right edge remains dedicated to reordering.
 
 When a Scene is added, its initial action is **Open in Unity**. Other Unity assets initially use **Select in Project**. Change either from the row's context menu.
 
