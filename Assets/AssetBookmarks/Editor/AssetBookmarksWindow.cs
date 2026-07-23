@@ -21,6 +21,7 @@ namespace AssetBookmarks.Editor
         private VisualElement dropOverlay;
         private DisplaySize displaySize;
         private string searchQuery = string.Empty;
+        private bool reorderHandlePressed;
 
         [MenuItem("Window/Asset Bookmarks")]
         private static void ShowWindow()
@@ -126,7 +127,7 @@ namespace AssetBookmarks.Editor
                 fixedItemHeight = GetRowHeight(displaySize),
                 selectionType = SelectionType.None,
                 reorderable = visibleItems.Count > 1,
-                reorderMode = ListViewReorderMode.Simple,
+                reorderMode = ListViewReorderMode.Animated,
                 showAlternatingRowBackgrounds = AlternatingRowBackground.None,
                 showBorder = false,
                 makeItem = () => new BookmarkRow(this),
@@ -134,6 +135,10 @@ namespace AssetBookmarks.Editor
                     ((BookmarkRow)element).Bind(visibleItems[index]),
             };
             listView.AddToClassList("asset-bookmarks__list");
+            listView.canStartDrag += _ => reorderHandlePressed;
+            listView.RegisterCallback<PointerDownEvent>(OnListPointerDown, TrickleDown.TrickleDown);
+            listView.RegisterCallback<PointerUpEvent>(_ => reorderHandlePressed = false, TrickleDown.TrickleDown);
+            listView.RegisterCallback<PointerCaptureOutEvent>(_ => reorderHandlePressed = false);
             listView.itemIndexChanged += (_, _) =>
             {
                 store.ApplyVisibleOrder(visibleItems);
@@ -150,6 +155,26 @@ namespace AssetBookmarks.Editor
             content.Add(emptyState);
 
             return content;
+        }
+
+        private void OnListPointerDown(PointerDownEvent evt)
+        {
+            reorderHandlePressed = evt.button == 0 && IsReorderHandle(evt.target as VisualElement);
+        }
+
+        private bool IsReorderHandle(VisualElement element)
+        {
+            while (element != null && element != listView)
+            {
+                if (element.ClassListContains("unity-list-view__reorderable-handle"))
+                {
+                    return true;
+                }
+
+                element = element.parent;
+            }
+
+            return false;
         }
 
         private VisualElement CreateDropOverlay()

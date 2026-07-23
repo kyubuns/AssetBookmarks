@@ -106,6 +106,29 @@
     padding-right: 3px;
 }
 
+.asset-bookmarks__list .unity-list-view__reorderable-item {
+    flex-direction: row-reverse;
+}
+
+.asset-bookmarks__list .unity-list-view__reorderable-item__container {
+    flex-grow: 1;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.asset-bookmarks__list .unity-list-view__reorderable-handle {
+    width: 16px;
+    min-width: 16px;
+    margin-left: 1px;
+    margin-right: 1px;
+    opacity: 0.45;
+}
+
+.asset-bookmarks__list .unity-list-view__reorderable-handle:hover {
+    opacity: 0.9;
+}
+
 .asset-bookmarks__row {
     height: 21px;
     flex-direction: row;
