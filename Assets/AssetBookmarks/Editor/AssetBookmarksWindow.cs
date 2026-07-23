@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -11,12 +12,15 @@ namespace AssetBookmarks.Editor
     {
         private const string DisplaySizeKey = "AssetBookmarks.v2.display-size";
 
+        private readonly List<Bookmark> visibleItems = new List<Bookmark>();
+
         private BookmarkStore store;
         private ListView listView;
         private VisualElement emptyState;
+        private Label emptyLabel;
         private VisualElement dropOverlay;
-        private Label countLabel;
         private DisplaySize displaySize;
+        private string searchQuery = string.Empty;
 
         [MenuItem("Window/Asset Bookmarks")]
         private static void ShowWindow()
@@ -80,9 +84,15 @@ namespace AssetBookmarks.Editor
             var toolbar = new VisualElement();
             toolbar.AddToClassList("asset-bookmarks__toolbar");
 
-            countLabel = new Label();
-            countLabel.AddToClassList("asset-bookmarks__count");
-            toolbar.Add(countLabel);
+            var searchField = new ToolbarSearchField();
+            searchField.tooltip = "Filter by name or path";
+            searchField.AddToClassList("asset-bookmarks__search");
+            searchField.RegisterValueChangedCallback(evt =>
+            {
+                searchQuery = evt.newValue ?? string.Empty;
+                RefreshView();
+            });
+            toolbar.Add(searchField);
 
             var optionsMenu = new ToolbarMenu { text = "Aa" };
             optionsMenu.tooltip = "Display size";
@@ -112,21 +122,21 @@ namespace AssetBookmarks.Editor
 
             listView = new ListView
             {
-                itemsSource = store.Items,
+                itemsSource = visibleItems,
                 fixedItemHeight = GetRowHeight(displaySize),
                 selectionType = SelectionType.None,
-                reorderable = store.Items.Count > 1,
+                reorderable = visibleItems.Count > 1,
                 reorderMode = ListViewReorderMode.Simple,
                 showAlternatingRowBackgrounds = AlternatingRowBackground.None,
                 showBorder = false,
                 makeItem = () => new BookmarkRow(this),
                 bindItem = (element, index) =>
-                    ((BookmarkRow)element).Bind(store.Items[index]),
+                    ((BookmarkRow)element).Bind(visibleItems[index]),
             };
             listView.AddToClassList("asset-bookmarks__list");
             listView.itemIndexChanged += (_, _) =>
             {
-                store.Save();
+                store.ApplyVisibleOrder(visibleItems);
                 RefreshView();
             };
             content.Add(listView);
@@ -134,7 +144,7 @@ namespace AssetBookmarks.Editor
             emptyState = new VisualElement();
             emptyState.AddToClassList("asset-bookmarks__empty");
 
-            var emptyLabel = new Label("Drop assets, files, or folders here");
+            emptyLabel = new Label("Drop assets, files, or folders here");
             emptyLabel.AddToClassList("asset-bookmarks__empty-label");
             emptyState.Add(emptyLabel);
             content.Add(emptyState);
@@ -247,16 +257,16 @@ namespace AssetBookmarks.Editor
 
         private void MoveBookmark(Bookmark bookmark, int offset)
         {
-            var currentIndex = store.Items.IndexOf(bookmark);
+            var currentIndex = visibleItems.IndexOf(bookmark);
             var nextIndex = currentIndex + offset;
-            if (currentIndex < 0 || nextIndex < 0 || nextIndex >= store.Items.Count)
+            if (currentIndex < 0 || nextIndex < 0 || nextIndex >= visibleItems.Count)
             {
                 return;
             }
 
-            store.Items.RemoveAt(currentIndex);
-            store.Items.Insert(nextIndex, bookmark);
-            store.Save();
+            visibleItems.RemoveAt(currentIndex);
+            visibleItems.Insert(nextIndex, bookmark);
+            store.ApplyVisibleOrder(visibleItems);
             RefreshView();
         }
 
@@ -324,12 +334,37 @@ namespace AssetBookmarks.Editor
                 return;
             }
 
-            var itemCount = store.Items.Count;
-            countLabel.text = itemCount == 1 ? "1 bookmark" : $"{itemCount} bookmarks";
-            listView.reorderable = itemCount > 1;
-            listView.style.display = itemCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            emptyState.style.display = itemCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            RebuildVisibleItems();
+
+            var visibleCount = visibleItems.Count;
+            var isFiltering = !string.IsNullOrWhiteSpace(searchQuery);
+            emptyLabel.text = isFiltering
+                ? "No matching bookmarks"
+                : "Drop assets, files, or folders here";
+            listView.reorderable = visibleCount > 1;
+            listView.style.display = visibleCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            emptyState.style.display = visibleCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             listView.Rebuild();
+        }
+
+        private void RebuildVisibleItems()
+        {
+            visibleItems.Clear();
+            var query = searchQuery?.Trim();
+            if (string.IsNullOrEmpty(query))
+            {
+                visibleItems.AddRange(store.Items);
+                return;
+            }
+
+            foreach (var bookmark in store.Items)
+            {
+                if (bookmark.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    bookmark.ResolvedPath.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    visibleItems.Add(bookmark);
+                }
+            }
         }
 
         private sealed class BookmarkRow : VisualElement
@@ -424,13 +459,13 @@ namespace AssetBookmarks.Editor
                 evt.menu.AppendAction(
                     "Move Up",
                     _ => window.MoveBookmark(bookmark, -1),
-                    _ => window.store.Items.IndexOf(bookmark) > 0
+                    _ => window.visibleItems.IndexOf(bookmark) > 0
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 evt.menu.AppendAction(
                     "Move Down",
                     _ => window.MoveBookmark(bookmark, 1),
-                    _ => window.store.Items.IndexOf(bookmark) < window.store.Items.Count - 1
+                    _ => window.visibleItems.IndexOf(bookmark) < window.visibleItems.Count - 1
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 evt.menu.AppendSeparator();

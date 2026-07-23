@@ -102,6 +102,29 @@ namespace AssetBookmarks.Editor
             }
         }
 
+        internal void ApplyVisibleOrder(IReadOnlyList<Bookmark> orderedVisibleItems)
+        {
+            var visibleItems = new HashSet<Bookmark>(orderedVisibleItems);
+            var orderedIndex = 0;
+            var changed = false;
+            for (var index = 0; index < Items.Count; index++)
+            {
+                if (!visibleItems.Contains(Items[index]))
+                {
+                    continue;
+                }
+
+                var orderedItem = orderedVisibleItems[orderedIndex++];
+                changed |= !ReferenceEquals(Items[index], orderedItem);
+                Items[index] = orderedItem;
+            }
+
+            if (changed)
+            {
+                Save();
+            }
+        }
+
         internal bool RefreshProjectPaths()
         {
             var changed = false;
