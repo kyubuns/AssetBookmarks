@@ -20,6 +20,18 @@ namespace AssetBookmarks.Editor
         DefaultApplication,
     }
 
+    internal enum BookmarkColor
+    {
+        None,
+        Red,
+        Orange,
+        Yellow,
+        Green,
+        Blue,
+        Purple,
+        Gray,
+    }
+
     [Serializable]
     internal sealed class Bookmark
     {
@@ -28,6 +40,7 @@ namespace AssetBookmarks.Editor
         [SerializeField] private string assetGuid;
         [SerializeField] private BookmarkKind kind;
         [SerializeField] private BookmarkOpenMode openMode;
+        [SerializeField] private BookmarkColor color;
 
         private Bookmark()
         {
@@ -38,6 +51,7 @@ namespace AssetBookmarks.Editor
         internal string AssetGuid => assetGuid;
         internal BookmarkKind Kind => kind;
         internal BookmarkOpenMode OpenMode => openMode;
+        internal BookmarkColor Color => color;
 
         internal string ResolvedPath
         {
@@ -162,6 +176,10 @@ namespace AssetBookmarks.Editor
                 ? path?.Trim() ?? string.Empty
                 : path?.Replace('\\', '/') ?? string.Empty;
             assetGuid = assetGuid ?? string.Empty;
+            if (!Enum.IsDefined(typeof(BookmarkColor), color))
+            {
+                color = BookmarkColor.None;
+            }
 
             if (kind == BookmarkKind.ProjectAsset && string.IsNullOrEmpty(assetGuid))
             {
@@ -202,6 +220,11 @@ namespace AssetBookmarks.Editor
             {
                 openMode = mode;
             }
+        }
+
+        internal void SetColor(BookmarkColor value)
+        {
+            color = value;
         }
 
         internal static bool TryNormalizeUrl(string value, out string normalizedUrl)

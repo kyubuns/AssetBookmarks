@@ -351,6 +351,18 @@ namespace AssetBookmarks.Editor
             RefreshView();
         }
 
+        private void SetBookmarkColor(Bookmark bookmark, BookmarkColor color)
+        {
+            if (bookmark.Color == color)
+            {
+                return;
+            }
+
+            bookmark.SetColor(color);
+            store.Save();
+            listView.RefreshItems();
+        }
+
         private void MoveBookmark(Bookmark bookmark, int offset)
         {
             var currentIndex = visibleItems.IndexOf(bookmark);
@@ -475,7 +487,20 @@ namespace AssetBookmarks.Editor
                 BookmarkOpenMode.DefaultApplication,
             };
 
+            private static readonly (BookmarkColor Value, string MenuLabel, Color Tint)[] ColorOptions =
+            {
+                (BookmarkColor.None, "No Color", Color.clear),
+                (BookmarkColor.Red, "🔴 Red", new Color32(255, 69, 72, 42)),
+                (BookmarkColor.Orange, "🟠 Orange", new Color32(255, 159, 10, 42)),
+                (BookmarkColor.Yellow, "🟡 Yellow", new Color32(255, 214, 10, 42)),
+                (BookmarkColor.Green, "🟢 Green", new Color32(48, 209, 88, 42)),
+                (BookmarkColor.Blue, "🔵 Blue", new Color32(10, 132, 255, 42)),
+                (BookmarkColor.Purple, "🟣 Purple", new Color32(191, 90, 242, 42)),
+                (BookmarkColor.Gray, "⚪ Gray", new Color32(142, 142, 147, 42)),
+            };
+
             private readonly AssetBookmarksWindow window;
+            private readonly VisualElement colorTint;
             private readonly Image icon;
             private readonly Label nameLabel;
             private readonly Label actionLabel;
@@ -487,6 +512,10 @@ namespace AssetBookmarks.Editor
             {
                 this.window = window;
                 AddToClassList("asset-bookmarks__row");
+
+                colorTint = new VisualElement { pickingMode = PickingMode.Ignore };
+                colorTint.AddToClassList("asset-bookmarks__row-color");
+                Add(colorTint);
 
                 icon = new Image { scaleMode = ScaleMode.ScaleToFit };
                 icon.AddToClassList("asset-bookmarks__row-icon");
@@ -520,6 +549,7 @@ namespace AssetBookmarks.Editor
                 nameLabel.tooltip = resolvedPath;
                 actionLabel.text = BookmarkActions.GetActionLabel(item);
                 icon.image = GetIcon(item, resolvedPath, available);
+                colorTint.style.backgroundColor = GetColorTint(item.Color);
                 missingLabel.style.display = available ? DisplayStyle.None : DisplayStyle.Flex;
                 EnableInClassList("asset-bookmarks__row--missing", !available);
             }
@@ -538,10 +568,11 @@ namespace AssetBookmarks.Editor
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 evt.menu.AppendAction("Copy Path", _ => GUIUtility.systemCopyBuffer = bookmark.ResolvedPath);
+                evt.menu.AppendSeparator();
+                AppendColorMenu(evt.menu);
 
                 if (bookmark.Kind == BookmarkKind.ProjectAsset)
                 {
-                    evt.menu.AppendSeparator();
                     foreach (var mode in OpenModes)
                     {
                         var capturedMode = mode;
@@ -569,6 +600,33 @@ namespace AssetBookmarks.Editor
                         : DropdownMenuAction.Status.Disabled);
                 evt.menu.AppendSeparator();
                 evt.menu.AppendAction("Remove Bookmark", _ => window.RemoveBookmark(bookmark));
+            }
+
+            private void AppendColorMenu(DropdownMenu menu)
+            {
+                foreach (var option in ColorOptions)
+                {
+                    var capturedOption = option;
+                    menu.AppendAction(
+                        $"Color/{capturedOption.MenuLabel}",
+                        _ => window.SetBookmarkColor(bookmark, capturedOption.Value),
+                        _ => bookmark.Color == capturedOption.Value
+                            ? DropdownMenuAction.Status.Checked
+                            : DropdownMenuAction.Status.Normal);
+                }
+            }
+
+            private static Color GetColorTint(BookmarkColor color)
+            {
+                foreach (var option in ColorOptions)
+                {
+                    if (option.Value == color)
+                    {
+                        return option.Tint;
+                    }
+                }
+
+                return Color.clear;
             }
 
             private static Texture GetIcon(Bookmark bookmark, string resolvedPath, bool available)
