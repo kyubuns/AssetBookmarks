@@ -337,7 +337,8 @@ namespace AssetBookmarks.Editor
             if (IsProjectAssetPath(normalizedSourcePath))
             {
                 var assetPath = NormalizeAssetPath(normalizedSourcePath);
-                if (!AssetDatabase.IsValidFolder(assetPath) && AssetDatabase.LoadMainAssetAtPath(assetPath) == null)
+                if (!AssetDatabase.IsValidFolder(assetPath) &&
+                    string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath)))
                 {
                     return false;
                 }

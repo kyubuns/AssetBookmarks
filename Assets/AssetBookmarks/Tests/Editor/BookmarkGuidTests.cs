@@ -40,8 +40,32 @@ namespace AssetBookmarks.Editor.Tests
             Assert.That(AssetDatabase.MoveAsset(originalPath, renamedPath), Is.Empty);
             Assert.That(AssetDatabase.AssetPathToGUID(renamedPath), Is.EqualTo(originalGuid));
             Assert.That(bookmark.ResolvedPath, Is.EqualTo(renamedPath));
+            Assert.That(bookmark.TryResolveTarget(out var resolvedPath), Is.True);
+            Assert.That(resolvedPath, Is.EqualTo(renamedPath));
             Assert.That(bookmark.RefreshProjectPath(), Is.True);
             Assert.That(bookmark.StoredPath, Is.EqualTo(renamedPath));
+        }
+
+        [Test]
+        public void ProjectBookmarkDoesNotResolveReplacementAtSamePath()
+        {
+            var assetPath = $"{temporaryFolder}/Original.anim";
+            var replacementPath = $"{temporaryFolder}/Replacement.anim";
+            AssetDatabase.CreateAsset(new AnimationClip(), assetPath);
+            AssetDatabase.CreateAsset(new AnimationClip(), replacementPath);
+
+            var bookmark = Bookmark.CreateProjectAsset(assetPath, BookmarkOpenMode.Select);
+            var originalGuid = bookmark.AssetGuid;
+            var replacementGuid = AssetDatabase.AssetPathToGUID(replacementPath);
+
+            Assert.That(AssetDatabase.DeleteAsset(assetPath), Is.True);
+            Assert.That(AssetDatabase.MoveAsset(replacementPath, assetPath), Is.Empty);
+            Assert.That(AssetDatabase.AssetPathToGUID(assetPath), Is.EqualTo(replacementGuid));
+            Assert.That(replacementGuid, Is.Not.EqualTo(originalGuid));
+
+            Assert.That(bookmark.TryResolveTarget(out var resolvedPath), Is.False);
+            Assert.That(resolvedPath, Is.EqualTo(assetPath));
+            Assert.That(bookmark.IsAvailable, Is.False);
         }
     }
 }

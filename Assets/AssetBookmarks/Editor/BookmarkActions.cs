@@ -8,12 +8,11 @@ namespace AssetBookmarks.Editor
     {
         internal static bool Open(Bookmark bookmark)
         {
-            if (!bookmark.IsAvailable)
+            if (!bookmark.TryResolveTarget(out var path))
             {
                 return false;
             }
 
-            var path = bookmark.ResolvedPath;
             if (bookmark.Kind == BookmarkKind.Url)
             {
                 Application.OpenURL(path);

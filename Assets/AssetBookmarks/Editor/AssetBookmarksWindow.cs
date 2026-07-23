@@ -455,8 +455,10 @@ namespace AssetBookmarks.Editor
 
             foreach (var bookmark in store.Items)
             {
-                if (bookmark.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    bookmark.ResolvedPath.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                var resolvedPath = bookmark.ResolvedPath;
+                var displayName = bookmark.GetDisplayName(resolvedPath);
+                if (displayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    resolvedPath.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     visibleItems.Add(bookmark);
                 }
@@ -510,14 +512,13 @@ namespace AssetBookmarks.Editor
             internal void Bind(Bookmark item)
             {
                 bookmark = item;
-                var available = item.IsAvailable;
-                var resolvedPath = item.ResolvedPath;
+                var available = item.TryResolveTarget(out var resolvedPath);
 
                 tooltip = resolvedPath;
-                nameLabel.text = item.DisplayName;
+                nameLabel.text = item.GetDisplayName(resolvedPath);
                 nameLabel.tooltip = resolvedPath;
                 actionLabel.text = BookmarkActions.GetActionLabel(item);
-                icon.image = GetIcon(item, available);
+                icon.image = GetIcon(item, resolvedPath, available);
                 missingLabel.style.display = available ? DisplayStyle.None : DisplayStyle.Flex;
                 EnableInClassList("asset-bookmarks__row--missing", !available);
             }
@@ -569,7 +570,7 @@ namespace AssetBookmarks.Editor
                 evt.menu.AppendAction("Remove Bookmark", _ => window.RemoveBookmark(bookmark));
             }
 
-            private static Texture GetIcon(Bookmark bookmark, bool available)
+            private static Texture GetIcon(Bookmark bookmark, string resolvedPath, bool available)
             {
                 if (!available)
                 {
@@ -578,7 +579,7 @@ namespace AssetBookmarks.Editor
 
                 if (bookmark.Kind == BookmarkKind.ProjectAsset)
                 {
-                    return AssetDatabase.GetCachedIcon(bookmark.ResolvedPath);
+                    return AssetDatabase.GetCachedIcon(resolvedPath);
                 }
 
                 if (bookmark.Kind == BookmarkKind.Url)
@@ -589,7 +590,7 @@ namespace AssetBookmarks.Editor
                         : EditorGUIUtility.IconContent("DefaultAsset Icon").image;
                 }
 
-                var iconName = Directory.Exists(bookmark.ResolvedPath) ? "Folder Icon" : "DefaultAsset Icon";
+                var iconName = Directory.Exists(resolvedPath) ? "Folder Icon" : "DefaultAsset Icon";
                 return EditorGUIUtility.IconContent(iconName).image;
             }
         }

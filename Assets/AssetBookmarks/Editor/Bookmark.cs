@@ -43,62 +43,76 @@ namespace AssetBookmarks.Editor
         {
             get
             {
-                if (kind != BookmarkKind.ProjectAsset || string.IsNullOrEmpty(assetGuid))
+                if (kind == BookmarkKind.ProjectAsset &&
+                    TryResolveProjectPath(out var currentPath))
                 {
-                    return path;
+                    return currentPath;
                 }
 
-                var currentPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-                return string.IsNullOrEmpty(currentPath) ? path : currentPath;
+                return path;
             }
         }
 
-        internal string DisplayName
+        internal string DisplayName => GetDisplayName(ResolvedPath);
+
+        internal bool IsAvailable => TryResolveTarget(out _);
+
+        internal bool TryResolveTarget(out string resolvedPath)
         {
-            get
+            resolvedPath = path;
+            if (kind == BookmarkKind.ProjectAsset)
             {
-                var resolvedPath = ResolvedPath;
-                if (string.IsNullOrEmpty(resolvedPath))
-                {
-                    return "Untitled";
-                }
-
-                if (kind == BookmarkKind.Url)
-                {
-                    return GetUrlDisplayName(resolvedPath);
-                }
-
-                var trimmedPath = resolvedPath.TrimEnd('/', '\\');
-                var fileName = Path.GetFileName(trimmedPath);
-                if (string.IsNullOrEmpty(fileName))
-                {
-                    return resolvedPath;
-                }
-
-                return kind == BookmarkKind.ProjectAsset && !AssetDatabase.IsValidFolder(resolvedPath)
-                    ? Path.GetFileNameWithoutExtension(fileName)
-                    : fileName;
+                return TryResolveProjectPath(out resolvedPath);
             }
+
+            if (kind == BookmarkKind.Url)
+            {
+                return TryNormalizeUrl(resolvedPath, out _);
+            }
+
+            return File.Exists(resolvedPath) || Directory.Exists(resolvedPath);
         }
 
-        internal bool IsAvailable
+        internal string GetDisplayName(string resolvedPath)
         {
-            get
+            if (string.IsNullOrEmpty(resolvedPath))
             {
-                var resolvedPath = ResolvedPath;
-                if (kind == BookmarkKind.ProjectAsset)
-                {
-                    return AssetDatabase.IsValidFolder(resolvedPath) ||
-                           AssetDatabase.LoadMainAssetAtPath(resolvedPath) != null;
-                }
-
-                if (kind == BookmarkKind.Url)
-                {
-                    return TryNormalizeUrl(resolvedPath, out _);
-                }
-
-                return File.Exists(resolvedPath) || Directory.Exists(resolvedPath);
+                return "Untitled";
             }
+
+            if (kind == BookmarkKind.Url)
+            {
+                return GetUrlDisplayName(resolvedPath);
+            }
+
+            var trimmedPath = resolvedPath.TrimEnd('/', '\\');
+            var fileName = Path.GetFileName(trimmedPath);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return resolvedPath;
+            }
+
+            return kind == BookmarkKind.ProjectAsset && !AssetDatabase.IsValidFolder(resolvedPath)
+                ? Path.GetFileNameWithoutExtension(fileName)
+                : fileName;
+        }
+
+        private bool TryResolveProjectPath(out string resolvedPath)
+        {
+            resolvedPath = path;
+            if (string.IsNullOrEmpty(assetGuid))
+            {
+                return false;
+            }
+
+            var currentPath = AssetDatabase.GUIDToAssetPath(assetGuid);
+            if (string.IsNullOrEmpty(currentPath))
+            {
+                return false;
+            }
+
+            resolvedPath = currentPath;
+            return true;
         }
 
         internal static Bookmark CreateProjectAsset(string assetPath, BookmarkOpenMode mode)
