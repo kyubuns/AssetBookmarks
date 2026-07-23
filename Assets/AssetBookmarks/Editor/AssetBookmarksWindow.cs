@@ -234,7 +234,7 @@ namespace AssetBookmarks.Editor
 
         private static bool HasDraggedPaths()
         {
-            return DragAndDrop.paths != null && DragAndDrop.paths.Length > 0;
+            return !BookmarkDragAndDrop.IsBookmarkDrag && DragAndDrop.paths != null && DragAndDrop.paths.Length > 0;
         }
 
         private void SetDropOverlayVisible(bool visible)
@@ -505,6 +505,7 @@ namespace AssetBookmarks.Editor
                 actionLabel.AddToClassList("asset-bookmarks__row-action");
                 Add(actionLabel);
 
+                this.AddManipulator(new BookmarkDragManipulator(() => bookmark));
                 this.AddManipulator(new Clickable(() => window.OpenBookmark(bookmark)));
                 this.AddManipulator(new ContextualMenuManipulator(PopulateContextMenu));
             }
