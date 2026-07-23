@@ -12,9 +12,10 @@
 - ヘッダーは左から即時検索、`+`、`Aa` の順とし、Bookmark件数は表示しない。狭幅では検索欄を先に縮め、両ボタンの最小幅と、矢印を除く領域での文字中央揃えを維持する。
 - 追加はウィンドウ全面のドラッグ＆ドロップと、選択中のUnity Asset・外部ファイル・外部フォルダ・Webサイトを扱うコンパクトな `+` メニューの両方を提供する。
 - 全体のEditモードは設けない。動作変更、Copy Path、移動、削除は項目ごとの右クリックメニューに置く。
+- Bookmarkの色分けは右クリックの `Color` サブメニューから解除と7色を選ぶ。行高や余白を増やさず、Unityテーマの背景とhoverを残す共通の半透明paletteで行全体へ表示し、Dark/Light別の色分岐は持たない。
 - 右端グリップは `ListView` と `canStartDrag` を使う並べ替え専用、行本体はBookmark対象をUnity標準のドラッグpayloadとして外へ渡す。Asset種別ごとのdrop挙動は受け側へ委ね、Prefab専用処理は持たない。
 - Small、Medium、Largeの表示設定で文字、アイコン、行高をまとめて変える。
-- Editor背景は塗りつぶさずUnityのホスト背景を継承し、色が必要な要素にはUnity USSテーマ変数を使う。Dark/Light別の固定RGB値は持たない。
+- Editor背景は塗りつぶさずUnityのホスト背景を継承し、Bookmarkの色分け以外で色が必要な要素にはUnity USSテーマ変数を使う。
 
 ## Data and actions
 
@@ -27,4 +28,4 @@
 
 - UIはUI Toolkitで実装し、Unityが提供するAPIと標準挙動で解決できる処理を独自実装しない。機能追加後は重複、不要な状態、分岐を見直してコードを簡潔に保つ。
 - 常駐ポーリングや毎フレーム処理を置かずイベント駆動にする。`ListView` の通常更新では行を再生成せず再利用し、表示、検索、存在確認だけのためにAsset本体をロードしない。
-- Scene既定動作、GUIDリネーム追従、URL正規化、外向きドラッグpayloadのEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。
+- Scene既定動作、GUIDリネーム追従、URL正規化、外向きドラッグpayload、色の保存互換のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。

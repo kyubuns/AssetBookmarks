@@ -2,6 +2,12 @@
 
 All notable changes to Asset Bookmarks are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Per-bookmark row colors with seven presets and a **No Color** option in the context menu.
+
 ## [2.1.0] - 2026-07-23
 
 ### Added

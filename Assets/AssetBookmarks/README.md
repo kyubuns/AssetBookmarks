@@ -16,7 +16,7 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 - Choose what happens when a Unity asset is clicked.
 - Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
 - Keep Unity asset bookmarks working after files are moved or renamed.
-- Reorder rows and choose from three compact display sizes.
+- Color-code and reorder rows, and choose from three compact display sizes.
 - Save changes automatically and locally for each project.
 
 ## Requirements
@@ -44,7 +44,7 @@ Add bookmarks in either of these ways:
 
 Website bookmarks support HTTP and HTTPS. If the scheme is omitted, `https://` is added automatically.
 
-Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to change its action, copy its path, move it, or remove it.
+Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to assign a color, change its action, copy its path, move it, or remove it.
 
 Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. External files and folders can also be dragged; websites cannot.
 
