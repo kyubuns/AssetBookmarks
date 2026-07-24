@@ -11,7 +11,7 @@
 - 小さくドッキングしたウィンドウで多数のBookmarkを一覧できることを最優先し、ヘッダーと各行は1行の高密度表示に保つ。
 - ヘッダーは左から即時検索、`+`、`Aa` の順とし、Bookmark件数は表示しない。狭幅では検索欄を先に縮め、両ボタンの最小幅と、矢印を除く領域での文字中央揃えを維持する。
 - 追加はウィンドウ全面のドラッグ＆ドロップと、選択中のUnity Asset・Scene内GameObject・外部ファイル・外部フォルダ・Webサイトを扱うコンパクトな `+` メニューの両方を提供する。
-- 全体のEditモードは設けない。動作変更、Copy Path、移動、削除は項目ごとの右クリックメニューに置く。
+- 全体のEditモードは設けない。動作変更、Scene内GameObjectのOpen Scene、Copy Path、移動、削除は項目ごとの右クリックメニューに置く。
 - Bookmarkの色分けは右クリックの `Color` サブメニューから解除と7色を選ぶ。行高や余白を増やさず、Unityテーマの背景とhoverを残す共通の半透明paletteで行全体へ表示し、Dark/Light別の色分岐は持たない。
 - 右端グリップは `ListView` と `canStartDrag` を使う並べ替え専用、行本体はBookmark対象をUnity標準のドラッグpayloadとして外へ渡す。Asset種別ごとのdrop挙動は受け側へ委ね、Prefab専用処理は持たない。
 - Small、Medium、Largeの表示設定で文字、アイコン、行高をまとめて変える。
@@ -20,7 +20,7 @@
 
 ## Data and actions
 
-- Unity内のファイルとフォルダはGUIDで保持し、移動・リネーム後のパスを解決する。Scene内GameObjectは `GlobalObjectId` で保持し、`GameObject名 (Scene名)` と表示して、保存済みSceneが開いている時だけHierarchyで選択可能にする。
+- Unity内のファイルとフォルダはGUIDで保持し、移動・リネーム後のパスを解決する。Scene内GameObjectは `GlobalObjectId` で保持し、`GameObject名 (Scene名)` と表示して、保存済みSceneが開いている時だけHierarchyで選択可能にする。Sceneが閉じていても右クリックの **Open Scene** から対象Sceneを開けるようにする。
 - 新規Sceneの既定動作は **Open in Unity**、その他のUnity Assetは **Select in Project** とする。
 - 外部ファイルとフォルダは既定アプリで開く。WebサイトはHTTP/HTTPSのみ受け付け、省略されたschemeには `https://` を補う。表示や可用性確認のためのネットワークアクセスは行わない。
 - Bookmarkは標準のUnity `.gitignore`で除外される `UserSettings/AssetBookmarks.json` へ即時・置換保存し、現行v2および旧v1の `EditorPrefs` データから初回移行する。DisplaySizeは互換移行せず、軽量なUI設定として `EditorPrefs` に保持する。
@@ -29,4 +29,4 @@
 
 - UIはUI Toolkitで実装し、Unityが提供するAPIと標準挙動で解決できる処理を独自実装しない。機能追加後は重複、不要な状態、分岐を見直してコードを簡潔に保つ。
 - 常駐ポーリングや毎フレーム処理を置かずイベント駆動にする。`ListView` の通常更新では行を再生成せず再利用し、表示、検索、存在確認だけのためにAsset本体をロードしない。
-- Scene既定動作、GUIDリネーム追従、Scene GameObjectの保存・解決・選択、URL正規化、外向きドラッグpayload、色の保存互換、v1/v2保存移行のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。
+- Scene既定動作、GUIDリネーム追従、Scene GameObjectの保存・解決・選択・Sceneオープン、URL正規化、外向きドラッグpayload、色の保存互換、v1/v2保存移行のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。

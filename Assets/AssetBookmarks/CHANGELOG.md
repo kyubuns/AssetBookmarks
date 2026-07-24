@@ -4,6 +4,10 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Open Scene** in the context menu of Scene GameObject bookmarks.
+
 ## [2.4.0] - 2026-07-24
 
 ### Added

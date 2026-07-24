@@ -14,7 +14,7 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 - Add bookmarks by drag and drop or from the compact **+** menu.
 - Search instantly by name or path.
 - Choose what happens when a Unity asset is clicked.
-- Select bookmarked GameObjects in the Hierarchy while their Scene is open.
+- Select bookmarked GameObjects in the Hierarchy while their Scene is open, or open that Scene from the row menu.
 - Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
 - Keep Unity asset bookmarks working after files are moved or renamed.
 - Color-code and reorder rows, and choose from three compact display sizes.
@@ -45,7 +45,7 @@ Add bookmarks in either of these ways:
 
 Website bookmarks support HTTP and HTTPS. If the scheme is omitted, `https://` is added automatically.
 
-Scene GameObjects appear as `GameObject (Scene)`. They can be selected and pinged in the Hierarchy only while their saved Scene is open; otherwise the row remains visible but disabled.
+Scene GameObjects appear as `GameObject (Scene)`. They can be selected and pinged in the Hierarchy only while their saved Scene is open; otherwise the row remains visible but disabled. Use **Open Scene** in the row's context menu to open it.
 
 Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to assign a color, change its action, copy its path, move it, or remove it.
 
