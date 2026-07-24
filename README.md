@@ -6,6 +6,8 @@ https://github.com/user-attachments/assets/2be31124-1b9c-4079-a260-695ae99c118b
 
 https://github.com/user-attachments/assets/3b518024-68bf-4d39-8dfc-016a8a57f9b6
 
+https://github.com/user-attachments/assets/95a5ec9f-5301-46b2-a830-6b3bca41a671
+
 Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic saving, resilient project-asset references, and migration from version 1.
 
 ## Features
