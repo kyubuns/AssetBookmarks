@@ -661,6 +661,16 @@ namespace AssetBookmarks.Editor
                     _ => bookmark.IsAvailable
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
+                if (bookmark.Kind == BookmarkKind.SceneObject)
+                {
+                    evt.menu.AppendAction(
+                        "Open Scene",
+                        _ => BookmarkActions.OpenScene(bookmark),
+                        action => bookmark.TryResolveScenePath(out _)
+                            ? DropdownMenuAction.Status.Normal
+                            : DropdownMenuAction.Status.Disabled);
+                }
+
                 evt.menu.AppendAction("Copy Path", _ => GUIUtility.systemCopyBuffer = bookmark.ResolvedPath);
                 evt.menu.AppendSeparator();
                 AppendColorMenu(evt.menu);

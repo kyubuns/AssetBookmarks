@@ -59,6 +59,18 @@ namespace AssetBookmarks.Editor
             return true;
         }
 
+        internal static bool OpenScene(Bookmark bookmark)
+        {
+            if (bookmark.Kind != BookmarkKind.SceneObject ||
+                !bookmark.TryResolveScenePath(out var scenePath))
+            {
+                return false;
+            }
+
+            var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+            return sceneAsset != null && AssetDatabase.OpenAsset(sceneAsset);
+        }
+
         internal static string GetActionLabel(Bookmark bookmark)
         {
             if (bookmark.Kind == BookmarkKind.External || bookmark.Kind == BookmarkKind.Url)

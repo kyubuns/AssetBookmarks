@@ -98,6 +98,16 @@ namespace AssetBookmarks.Editor.Tests
         }
 
         [Test]
+        public void SceneObjectBookmarkCanOpenItsScene()
+        {
+            Assert.That(Bookmark.TryCreateSceneObject(target, out var bookmark), Is.True);
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            Assert.That(BookmarkActions.OpenScene(bookmark), Is.True);
+            Assert.That(SceneManager.GetActiveScene().path, Is.EqualTo(scenePath));
+        }
+
+        [Test]
         public void SceneObjectBookmarkCreatesUnityDragPayload()
         {
             Assert.That(Bookmark.TryCreateSceneObject(target, out var bookmark), Is.True);

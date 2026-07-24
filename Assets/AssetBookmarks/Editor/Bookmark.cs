@@ -201,7 +201,7 @@ namespace AssetBookmarks.Editor
             return gameObject != null && gameObject.scene == scene;
         }
 
-        private bool TryResolveScenePath(out string scenePath)
+        internal bool TryResolveScenePath(out string scenePath)
         {
             return TryResolveScenePath(out scenePath, out _);
         }
