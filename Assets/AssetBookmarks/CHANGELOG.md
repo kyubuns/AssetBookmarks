@@ -4,6 +4,8 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-07-24
+
 ### Added
 
 - Scene GameObject bookmarks from Hierarchy drag and drop or the **+** menu, with Hierarchy selection while the saved Scene is open.
