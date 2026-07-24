@@ -10,10 +10,11 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 
 ## Features
 
-- Bookmark Unity assets, external files and folders, and websites such as Jenkins jobs.
+- Bookmark Unity assets, GameObjects in saved Scenes, external files and folders, and websites such as Jenkins jobs.
 - Add bookmarks by drag and drop or from the compact **+** menu.
 - Search instantly by name or path.
 - Choose what happens when a Unity asset is clicked.
+- Select bookmarked GameObjects in the Hierarchy while their Scene is open.
 - Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
 - Keep Unity asset bookmarks working after files are moved or renamed.
 - Color-code and reorder rows, and choose from three compact display sizes.
@@ -39,14 +40,16 @@ Open **Window > Asset Bookmarks**.
 
 Add bookmarks in either of these ways:
 
-- Drag assets from the Project window, or files and folders from Finder or Explorer, anywhere onto the window.
-- Use the **+** menu to add selected Unity assets, external files or folders, or a website.
+- Drag assets from the Project window, GameObjects from the Hierarchy, or files and folders from Finder or Explorer anywhere onto the window.
+- Use the **+** menu to add selected Unity assets or GameObjects, external files or folders, or a website.
 
 Website bookmarks support HTTP and HTTPS. If the scheme is omitted, `https://` is added automatically.
 
+Scene GameObjects appear as `GameObject (Scene)`. They can be selected and pinged in the Hierarchy only while their saved Scene is open; otherwise the row remains visible but disabled.
+
 Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to assign a color, change its action, copy its path, move it, or remove it.
 
-Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. External files and folders can also be dragged; websites cannot.
+Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. Open-Scene GameObjects, external files, and external folders can also be dragged; websites cannot.
 
 Drag the right-edge grip to reorder rows. Use **Aa** to choose Small, Medium, or Large.
 
@@ -67,7 +70,7 @@ External files and folders always open with their default application. Website b
 
 Bookmarks are saved in `UserSettings/AssetBookmarks.json`, which is excluded by the standard Unity `.gitignore`. They remain local to each project and computer.
 
-Unity asset bookmarks follow moved or renamed assets. Existing bookmarks stored by version 1 or earlier version 2 releases are imported automatically.
+Unity asset bookmarks follow moved or renamed assets, and Scene GameObject bookmarks follow renamed objects. Existing bookmarks stored by version 1 or earlier version 2 releases are imported automatically.
 
 ## License
 

@@ -3,7 +3,7 @@
   "displayName": "Asset Bookmarks",
   "version": "2.3.0",
   "unity": "6000.3",
-  "description": "A focused UI Toolkit window for bookmarking Unity assets, external paths, and websites.",
+  "description": "A focused UI Toolkit window for bookmarking Unity assets, Scene GameObjects, external paths, and websites.",
   "documentationUrl": "https://github.com/kyubuns/AssetBookmarks",
   "changelogUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/CHANGELOG.md",
   "licensesUrl": "https://github.com/kyubuns/AssetBookmarks/blob/main/Assets/AssetBookmarks/LICENSE.md",
