@@ -8,6 +8,18 @@ namespace AssetBookmarks.Editor
     {
         internal static bool Open(Bookmark bookmark)
         {
+            if (bookmark.Kind == BookmarkKind.SceneObject)
+            {
+                if (!bookmark.TryResolveSceneObject(out var gameObject))
+                {
+                    return false;
+                }
+
+                Selection.activeGameObject = gameObject;
+                EditorGUIUtility.PingObject(gameObject);
+                return true;
+            }
+
             if (!bookmark.TryResolveTarget(out var path))
             {
                 return false;

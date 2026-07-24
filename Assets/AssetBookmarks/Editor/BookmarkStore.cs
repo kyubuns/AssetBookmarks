@@ -71,14 +71,19 @@ namespace AssetBookmarks.Editor
             }
 
             store.RefreshProjectPaths();
+            store.RefreshSceneObjectNames();
             return store;
         }
 
         internal BookmarkAddResult AddPaths(IEnumerable<string> paths)
         {
-            var added = 0;
-            var duplicate = 0;
+            return AddItems(paths, Array.Empty<GameObject>());
+        }
+
+        internal BookmarkAddResult AddItems(IEnumerable<string> paths, IEnumerable<GameObject> sceneObjects)
+        {
             var invalid = 0;
+            var candidates = new List<Bookmark>();
 
             foreach (var sourcePath in paths)
             {
@@ -88,6 +93,24 @@ namespace AssetBookmarks.Editor
                     continue;
                 }
 
+                candidates.Add(bookmark);
+            }
+
+            foreach (var sceneObject in sceneObjects)
+            {
+                if (!Bookmark.TryCreateSceneObject(sceneObject, out var bookmark))
+                {
+                    invalid++;
+                    continue;
+                }
+
+                candidates.Add(bookmark);
+            }
+
+            var added = 0;
+            var duplicate = 0;
+            foreach (var bookmark in candidates)
+            {
                 if (Contains(bookmark))
                 {
                     duplicate++;
@@ -161,6 +184,22 @@ namespace AssetBookmarks.Editor
             foreach (var bookmark in Items)
             {
                 changed |= bookmark.RefreshProjectPath();
+            }
+
+            if (changed)
+            {
+                Save();
+            }
+
+            return changed;
+        }
+
+        internal bool RefreshSceneObjectNames()
+        {
+            var changed = false;
+            foreach (var bookmark in Items)
+            {
+                changed |= bookmark.RefreshSceneObjectName();
             }
 
             if (changed)
@@ -343,7 +382,10 @@ namespace AssetBookmarks.Editor
 
                 item.EnsureValidData();
                 var identity = GetIdentity(item);
-                if (string.IsNullOrEmpty(item.StoredPath) ||
+                var hasStoredTarget = item.Kind == BookmarkKind.SceneObject
+                    ? !string.IsNullOrEmpty(item.GlobalId)
+                    : !string.IsNullOrEmpty(item.StoredPath);
+                if (!hasStoredTarget ||
                     string.IsNullOrEmpty(identity) ||
                     !identities.Add(identity))
                 {
@@ -371,6 +413,13 @@ namespace AssetBookmarks.Editor
                 return Bookmark.TryNormalizeUrl(bookmark.ResolvedPath, out var normalizedUrl)
                     ? $"url:{normalizedUrl}"
                     : string.Empty;
+            }
+
+            if (bookmark.Kind == BookmarkKind.SceneObject)
+            {
+                return string.IsNullOrEmpty(bookmark.GlobalId)
+                    ? string.Empty
+                    : $"scene-object:{bookmark.GlobalId}";
             }
 
             var path = bookmark.ResolvedPath;

@@ -15,7 +15,23 @@ namespace AssetBookmarks.Editor
         {
             objectReferences = Array.Empty<UnityEngine.Object>();
             paths = Array.Empty<string>();
-            if (bookmark == null || bookmark.Kind == BookmarkKind.Url || !bookmark.TryResolveTarget(out var path))
+            if (bookmark == null || bookmark.Kind == BookmarkKind.Url)
+            {
+                return false;
+            }
+
+            if (bookmark.Kind == BookmarkKind.SceneObject)
+            {
+                if (!bookmark.TryResolveSceneObject(out var gameObject))
+                {
+                    return false;
+                }
+
+                objectReferences = new UnityEngine.Object[] { gameObject };
+                return true;
+            }
+
+            if (!bookmark.TryResolveTarget(out var path))
             {
                 return false;
             }
@@ -46,7 +62,7 @@ namespace AssetBookmarks.Editor
             DragAndDrop.objectReferences = objectReferences;
             DragAndDrop.paths = paths;
             DragAndDrop.SetGenericData(SourceKey, true);
-            DragAndDrop.StartDrag(bookmark.GetDisplayName(paths[0]));
+            DragAndDrop.StartDrag(bookmark.DisplayName);
             return true;
         }
     }
@@ -85,7 +101,11 @@ namespace AssetBookmarks.Editor
         private void OnPointerDown(PointerDownEvent evt)
         {
             var bookmark = getBookmark();
-            if (pointerId >= 0 || !CanStartManipulation(evt) || bookmark == null || bookmark.Kind == BookmarkKind.Url)
+            if (pointerId >= 0 ||
+                !CanStartManipulation(evt) ||
+                bookmark == null ||
+                bookmark.Kind == BookmarkKind.Url ||
+                !bookmark.IsAvailable)
             {
                 return;
             }

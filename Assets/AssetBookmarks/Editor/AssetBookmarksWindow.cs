@@ -43,11 +43,14 @@ namespace AssetBookmarks.Editor
             store = BookmarkStore.Load();
             EditorApplication.projectChanged -= OnProjectChanged;
             EditorApplication.projectChanged += OnProjectChanged;
+            EditorApplication.hierarchyChanged -= OnHierarchyChanged;
+            EditorApplication.hierarchyChanged += OnHierarchyChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.projectChanged -= OnProjectChanged;
+            EditorApplication.hierarchyChanged -= OnHierarchyChanged;
             statusDismissal?.Pause();
         }
 
@@ -103,9 +106,9 @@ namespace AssetBookmarks.Editor
             addMenu.tooltip = "Add bookmark";
             addMenu.AddToClassList("asset-bookmarks__add-button");
             addMenu.menu.AppendAction(
-                "Selected Unity Assets",
-                _ => AddSelectedAssets(),
-                _ => HasSelectedAssets()
+                "Selected Assets / GameObjects",
+                _ => AddSelectedItems(),
+                _ => HasSelectedItems()
                     ? DropdownMenuAction.Status.Normal
                     : DropdownMenuAction.Status.Disabled);
             addMenu.menu.AppendSeparator();
@@ -169,7 +172,7 @@ namespace AssetBookmarks.Editor
             emptyState = new VisualElement();
             emptyState.AddToClassList("asset-bookmarks__empty");
 
-            emptyLabel = new Label("Drop assets, files, or folders here");
+            emptyLabel = new Label("Drop assets, GameObjects, files, or folders here");
             emptyLabel.AddToClassList("asset-bookmarks__empty-label");
             emptyState.Add(emptyLabel);
             content.Add(emptyState);
@@ -235,7 +238,7 @@ namespace AssetBookmarks.Editor
         {
             rootVisualElement.RegisterCallback<DragUpdatedEvent>(evt =>
             {
-                if (!HasDraggedPaths())
+                if (!HasDraggedItems())
                 {
                     return;
                 }
@@ -250,21 +253,53 @@ namespace AssetBookmarks.Editor
 
             rootVisualElement.RegisterCallback<DragPerformEvent>(evt =>
             {
-                if (!HasDraggedPaths())
+                if (!HasDraggedItems())
                 {
                     return;
                 }
 
                 DragAndDrop.AcceptDrag();
                 SetDropOverlayVisible(false);
-                AddPaths(DragAndDrop.paths);
+                AddItems(DragAndDrop.paths, GetDraggedSceneObjects());
                 evt.StopPropagation();
             }, TrickleDown.TrickleDown);
         }
 
-        private static bool HasDraggedPaths()
+        private static bool HasDraggedItems()
         {
-            return !BookmarkDragAndDrop.IsBookmarkDrag && DragAndDrop.paths != null && DragAndDrop.paths.Length > 0;
+            if (BookmarkDragAndDrop.IsBookmarkDrag)
+            {
+                return false;
+            }
+
+            if (DragAndDrop.paths != null && DragAndDrop.paths.Length > 0)
+            {
+                return true;
+            }
+
+            foreach (var objectReference in DragAndDrop.objectReferences)
+            {
+                if (objectReference is GameObject gameObject && Bookmark.CanCreateSceneObject(gameObject))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static List<GameObject> GetDraggedSceneObjects()
+        {
+            var sceneObjects = new List<GameObject>();
+            foreach (var objectReference in DragAndDrop.objectReferences)
+            {
+                if (objectReference is GameObject gameObject && Bookmark.CanCreateSceneObject(gameObject))
+                {
+                    sceneObjects.Add(gameObject);
+                }
+            }
+
+            return sceneObjects;
         }
 
         private void SetDropOverlayVisible(bool visible)
@@ -290,9 +325,10 @@ namespace AssetBookmarks.Editor
                 : AssetDatabase.LoadAssetAtPath<StyleSheet>($"{editorDirectory}/UI/AssetBookmarks.uss");
         }
 
-        private void AddSelectedAssets()
+        private void AddSelectedItems()
         {
             var paths = new List<string>();
+            var sceneObjects = new List<GameObject>();
             foreach (var selectedObject in Selection.objects)
             {
                 var path = AssetDatabase.GetAssetPath(selectedObject);
@@ -300,16 +336,21 @@ namespace AssetBookmarks.Editor
                 {
                     paths.Add(path);
                 }
+                else if (selectedObject is GameObject gameObject && Bookmark.CanCreateSceneObject(gameObject))
+                {
+                    sceneObjects.Add(gameObject);
+                }
             }
 
-            AddPaths(paths);
+            AddItems(paths, sceneObjects);
         }
 
-        private static bool HasSelectedAssets()
+        private static bool HasSelectedItems()
         {
             foreach (var selectedObject in Selection.objects)
             {
-                if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(selectedObject)))
+                if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(selectedObject)) ||
+                    selectedObject is GameObject gameObject && Bookmark.CanCreateSceneObject(gameObject))
                 {
                     return true;
                 }
@@ -338,7 +379,12 @@ namespace AssetBookmarks.Editor
 
         private void AddPaths(IEnumerable<string> paths)
         {
-            var result = store.AddPaths(paths);
+            AddItems(paths, Array.Empty<GameObject>());
+        }
+
+        private void AddItems(IEnumerable<string> paths, IEnumerable<GameObject> sceneObjects)
+        {
+            var result = store.AddItems(paths, sceneObjects);
             RefreshView();
 
             if (result.Added > 0)
@@ -352,7 +398,7 @@ namespace AssetBookmarks.Editor
             }
             else
             {
-                ShowStatus("No valid files or assets found.");
+                ShowStatus("No valid items found.");
             }
         }
 
@@ -465,6 +511,12 @@ namespace AssetBookmarks.Editor
             RefreshView();
         }
 
+        private void OnHierarchyChanged()
+        {
+            store?.RefreshSceneObjectNames();
+            RefreshView();
+        }
+
         private void RefreshView()
         {
             if (listView == null)
@@ -478,7 +530,7 @@ namespace AssetBookmarks.Editor
             var isFiltering = !string.IsNullOrWhiteSpace(searchQuery);
             emptyLabel.text = isFiltering
                 ? "No matching bookmarks"
-                : "Drop assets, files, or folders here";
+                : "Drop assets, GameObjects, files, or folders here";
             listView.reorderable = visibleCount > 1;
             listView.style.display = visibleCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             emptyState.style.display = visibleCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -537,6 +589,7 @@ namespace AssetBookmarks.Editor
             private readonly Label missingLabel;
 
             private Bookmark bookmark;
+            private bool isAvailable;
 
             internal BookmarkRow(AssetBookmarksWindow window)
             {
@@ -565,23 +618,34 @@ namespace AssetBookmarks.Editor
                 Add(actionLabel);
 
                 this.AddManipulator(new BookmarkDragManipulator(() => bookmark));
-                this.AddManipulator(new Clickable(() => window.OpenBookmark(bookmark)));
+                this.AddManipulator(new Clickable(() =>
+                {
+                    if (isAvailable)
+                    {
+                        window.OpenBookmark(bookmark);
+                    }
+                }));
                 this.AddManipulator(new ContextualMenuManipulator(PopulateContextMenu));
             }
 
             internal void Bind(Bookmark item)
             {
                 bookmark = item;
-                var available = item.TryResolveTarget(out var resolvedPath);
+                isAvailable = item.TryResolveTarget(out var resolvedPath);
+                var inactiveSceneObject = item.Kind == BookmarkKind.SceneObject && !isAvailable;
 
-                tooltip = resolvedPath;
+                tooltip = inactiveSceneObject
+                    ? "Open this GameObject's scene to select it."
+                    : resolvedPath;
                 nameLabel.text = item.GetDisplayName(resolvedPath);
-                nameLabel.tooltip = resolvedPath;
+                nameLabel.tooltip = tooltip;
                 actionLabel.text = BookmarkActions.GetActionLabel(item);
-                icon.image = GetIcon(item, resolvedPath, available);
+                icon.image = GetIcon(item, resolvedPath, isAvailable);
                 colorTint.style.backgroundColor = GetColorTint(item.Color);
-                missingLabel.style.display = available ? DisplayStyle.None : DisplayStyle.Flex;
-                EnableInClassList("asset-bookmarks__row--missing", !available);
+                missingLabel.style.display = !isAvailable && !inactiveSceneObject
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+                EnableInClassList("asset-bookmarks__row--unavailable", !isAvailable);
             }
 
             private void PopulateContextMenu(ContextualMenuPopulateEvent evt)
@@ -661,6 +725,11 @@ namespace AssetBookmarks.Editor
 
             private static Texture GetIcon(Bookmark bookmark, string resolvedPath, bool available)
             {
+                if (bookmark.Kind == BookmarkKind.SceneObject)
+                {
+                    return EditorGUIUtility.IconContent("GameObject Icon").image;
+                }
+
                 if (!available)
                 {
                     return EditorGUIUtility.IconContent("console.warnicon.sml").image;

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace AssetBookmarks.Editor
 {
@@ -10,6 +11,7 @@ namespace AssetBookmarks.Editor
         ProjectAsset,
         External,
         Url,
+        SceneObject,
     }
 
     internal enum BookmarkOpenMode
@@ -38,9 +40,11 @@ namespace AssetBookmarks.Editor
         [SerializeField] private string id;
         [SerializeField] private string path;
         [SerializeField] private string assetGuid;
+        [SerializeField] private string globalObjectId;
         [SerializeField] private BookmarkKind kind;
         [SerializeField] private BookmarkOpenMode openMode;
         [SerializeField] private BookmarkColor color;
+        [NonSerialized] private GameObject resolvedSceneObject;
 
         private Bookmark()
         {
@@ -49,6 +53,7 @@ namespace AssetBookmarks.Editor
         internal string Id => id;
         internal string StoredPath => path;
         internal string AssetGuid => assetGuid;
+        internal string GlobalId => globalObjectId;
         internal BookmarkKind Kind => kind;
         internal BookmarkOpenMode OpenMode => openMode;
         internal BookmarkColor Color => color;
@@ -63,6 +68,12 @@ namespace AssetBookmarks.Editor
                     return currentPath;
                 }
 
+                if (kind == BookmarkKind.SceneObject &&
+                    TryResolveScenePath(out currentPath))
+                {
+                    return currentPath;
+                }
+
                 return path;
             }
         }
@@ -71,12 +82,31 @@ namespace AssetBookmarks.Editor
 
         internal bool IsAvailable => TryResolveTarget(out _);
 
+        internal bool IsSceneLoaded
+        {
+            get
+            {
+                if (!TryResolveScenePath(out var scenePath))
+                {
+                    return false;
+                }
+
+                var scene = SceneManager.GetSceneByPath(scenePath);
+                return scene.IsValid() && scene.isLoaded;
+            }
+        }
+
         internal bool TryResolveTarget(out string resolvedPath)
         {
             resolvedPath = path;
             if (kind == BookmarkKind.ProjectAsset)
             {
                 return TryResolveProjectPath(out resolvedPath);
+            }
+
+            if (kind == BookmarkKind.SceneObject)
+            {
+                return TryResolveSceneObject(out _, out resolvedPath);
             }
 
             if (kind == BookmarkKind.Url)
@@ -89,6 +119,18 @@ namespace AssetBookmarks.Editor
 
         internal string GetDisplayName(string resolvedPath)
         {
+            if (kind == BookmarkKind.SceneObject)
+            {
+                if (string.IsNullOrEmpty(path))
+                {
+                    return "Untitled";
+                }
+
+                return TryResolveScenePath(out var scenePath)
+                    ? $"{path} ({Path.GetFileNameWithoutExtension(scenePath)})"
+                    : path;
+            }
+
             if (string.IsNullOrEmpty(resolvedPath))
             {
                 return "Untitled";
@@ -129,6 +171,53 @@ namespace AssetBookmarks.Editor
             return true;
         }
 
+        internal bool TryResolveSceneObject(out GameObject gameObject)
+        {
+            return TryResolveSceneObject(out gameObject, out _);
+        }
+
+        private bool TryResolveSceneObject(out GameObject gameObject, out string scenePath)
+        {
+            gameObject = null;
+            if (!TryResolveScenePath(out scenePath, out var identifier))
+            {
+                return false;
+            }
+
+            var scene = SceneManager.GetSceneByPath(scenePath);
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return false;
+            }
+
+            if (resolvedSceneObject != null && resolvedSceneObject.scene == scene)
+            {
+                gameObject = resolvedSceneObject;
+                return true;
+            }
+
+            gameObject = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(identifier) as GameObject;
+            resolvedSceneObject = gameObject;
+            return gameObject != null && gameObject.scene == scene;
+        }
+
+        private bool TryResolveScenePath(out string scenePath)
+        {
+            return TryResolveScenePath(out scenePath, out _);
+        }
+
+        private bool TryResolveScenePath(out string scenePath, out GlobalObjectId identifier)
+        {
+            scenePath = string.Empty;
+            if (!GlobalObjectId.TryParse(globalObjectId, out identifier))
+            {
+                return false;
+            }
+
+            scenePath = AssetDatabase.GUIDToAssetPath(identifier.assetGUID.ToString());
+            return !string.IsNullOrEmpty(scenePath);
+        }
+
         internal static Bookmark CreateProjectAsset(string assetPath, BookmarkOpenMode mode)
         {
             return new Bookmark
@@ -136,6 +225,7 @@ namespace AssetBookmarks.Editor
                 id = Guid.NewGuid().ToString("N"),
                 path = assetPath,
                 assetGuid = AssetDatabase.AssetPathToGUID(assetPath),
+                globalObjectId = string.Empty,
                 kind = BookmarkKind.ProjectAsset,
                 openMode = mode,
             };
@@ -148,6 +238,7 @@ namespace AssetBookmarks.Editor
                 id = Guid.NewGuid().ToString("N"),
                 path = absolutePath,
                 assetGuid = string.Empty,
+                globalObjectId = string.Empty,
                 kind = BookmarkKind.External,
                 openMode = BookmarkOpenMode.DefaultApplication,
             };
@@ -160,9 +251,47 @@ namespace AssetBookmarks.Editor
                 id = Guid.NewGuid().ToString("N"),
                 path = url,
                 assetGuid = string.Empty,
+                globalObjectId = string.Empty,
                 kind = BookmarkKind.Url,
                 openMode = BookmarkOpenMode.DefaultApplication,
             };
+        }
+
+        internal static bool CanCreateSceneObject(GameObject gameObject)
+        {
+            return gameObject != null &&
+                   !EditorUtility.IsPersistent(gameObject) &&
+                   gameObject.scene.IsValid() &&
+                   gameObject.scene.isLoaded &&
+                   !string.IsNullOrEmpty(gameObject.scene.path);
+        }
+
+        internal static bool TryCreateSceneObject(GameObject gameObject, out Bookmark bookmark)
+        {
+            bookmark = null;
+            if (!CanCreateSceneObject(gameObject))
+            {
+                return false;
+            }
+
+            var identifier = GlobalObjectId.GetGlobalObjectIdSlow(gameObject);
+            var sceneGuid = AssetDatabase.AssetPathToGUID(gameObject.scene.path);
+            if (string.IsNullOrEmpty(sceneGuid) ||
+                !StringComparer.OrdinalIgnoreCase.Equals(identifier.assetGUID.ToString(), sceneGuid))
+            {
+                return false;
+            }
+
+            bookmark = new Bookmark
+            {
+                id = Guid.NewGuid().ToString("N"),
+                path = gameObject.name,
+                assetGuid = string.Empty,
+                globalObjectId = identifier.ToString(),
+                kind = BookmarkKind.SceneObject,
+                openMode = BookmarkOpenMode.Select,
+            };
+            return true;
         }
 
         internal void EnsureValidData()
@@ -174,8 +303,14 @@ namespace AssetBookmarks.Editor
 
             path = kind == BookmarkKind.Url
                 ? path?.Trim() ?? string.Empty
-                : path?.Replace('\\', '/') ?? string.Empty;
+                : path ?? string.Empty;
+            if (kind == BookmarkKind.ProjectAsset || kind == BookmarkKind.External)
+            {
+                path = path.Replace('\\', '/');
+            }
+
             assetGuid = assetGuid ?? string.Empty;
+            globalObjectId = globalObjectId ?? string.Empty;
             if (!Enum.IsDefined(typeof(BookmarkColor), color))
             {
                 color = BookmarkColor.None;
@@ -195,6 +330,10 @@ namespace AssetBookmarks.Editor
             {
                 openMode = BookmarkOpenMode.DefaultApplication;
             }
+            else if (kind == BookmarkKind.SceneObject)
+            {
+                openMode = BookmarkOpenMode.Select;
+            }
         }
 
         internal bool RefreshProjectPath()
@@ -211,6 +350,17 @@ namespace AssetBookmarks.Editor
             }
 
             path = currentPath;
+            return true;
+        }
+
+        internal bool RefreshSceneObjectName()
+        {
+            if (!TryResolveSceneObject(out var gameObject) || gameObject.name == path)
+            {
+                return false;
+            }
+
+            path = gameObject.name;
             return true;
         }
 
