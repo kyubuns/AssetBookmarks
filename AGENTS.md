@@ -23,10 +23,10 @@
 - Unity内のファイルとフォルダはGUIDで保持し、移動・リネーム後のパスを解決する。Bookmark対象がAsset全体である限り `GlobalObjectId` は使わず、sub-object対応が必要になった時だけ再検討する。
 - 新規Sceneの既定動作は **Open in Unity**、その他のUnity Assetは **Select in Project** とする。
 - 外部ファイルとフォルダは既定アプリで開く。WebサイトはHTTP/HTTPSのみ受け付け、省略されたschemeには `https://` を補う。表示や可用性確認のためのネットワークアクセスは行わない。
-- Bookmarkはプロジェクトの絶対パスでscopeした `EditorPrefs` に保存し、変更は即時保存する。
+- Bookmarkは標準のUnity `.gitignore`で除外される `UserSettings/AssetBookmarks.json` へ即時・置換保存し、現行v2および旧v1の `EditorPrefs` データから初回移行する。DisplaySizeは互換移行せず、軽量なUI設定として `EditorPrefs` に保持する。
 
 ## Implementation
 
 - UIはUI Toolkitで実装し、Unityが提供するAPIと標準挙動で解決できる処理を独自実装しない。機能追加後は重複、不要な状態、分岐を見直してコードを簡潔に保つ。
 - 常駐ポーリングや毎フレーム処理を置かずイベント駆動にする。`ListView` の通常更新では行を再生成せず再利用し、表示、検索、存在確認だけのためにAsset本体をロードしない。
-- Scene既定動作、GUIDリネーム追従、URL正規化、外向きドラッグpayload、色の保存互換のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。
+- Scene既定動作、GUIDリネーム追従、URL正規化、外向きドラッグpayload、色の保存互換、v1/v2保存移行のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。

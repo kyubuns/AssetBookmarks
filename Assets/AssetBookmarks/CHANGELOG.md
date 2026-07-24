@@ -4,7 +4,7 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
-## [2.2.0] - 2026-07-23
+## [2.2.0] - 2026-07-24
 
 ### Added
 
@@ -13,6 +13,7 @@ All notable changes to Asset Bookmarks are documented in this file.
 ### Changed
 
 - Set the minimum supported Editor version to Unity 6.3 without requiring a specific patch release.
+- Store bookmarks in an atomically replaced `UserSettings` file, with automatic migration from version 1 and version 2 `EditorPrefs` data.
 
 ### Fixed
 

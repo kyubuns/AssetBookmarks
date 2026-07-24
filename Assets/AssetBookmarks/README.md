@@ -65,9 +65,9 @@ External files and folders always open with their default application. Website b
 
 ## Storage
 
-Bookmarks are saved locally for each Unity project and are not committed with the project. External bookmarks are therefore specific to the current computer.
+Bookmarks are saved in `UserSettings/AssetBookmarks.json`, which is excluded by the standard Unity `.gitignore`. They remain local to each project and computer.
 
-Unity asset bookmarks follow moved or renamed assets. Existing version 1 bookmarks are imported automatically.
+Unity asset bookmarks follow moved or renamed assets. Existing bookmarks stored by version 1 or earlier version 2 releases are imported automatically.
 
 ## License
 
