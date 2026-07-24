@@ -23,42 +23,54 @@ namespace AssetBookmarks.Editor
     internal sealed class BookmarkStore
     {
         private const int CurrentSchemaVersion = 2;
+        private const string RelativeStoragePath = "UserSettings/AssetBookmarks.json";
         private const string StorageKeyPrefix = "AssetBookmarks.v2";
         private const string LegacyKeyPrefix = "AssetBookmarks";
 
-        private readonly string storageKey;
+        private readonly string storagePath;
 
-        private BookmarkStore(string storageKey, List<Bookmark> items, bool migratedLegacyData)
+        private BookmarkStore(string storagePath, List<Bookmark> items, bool migratedEditorPrefsData)
         {
-            this.storageKey = storageKey;
+            this.storagePath = storagePath;
             Items = items;
-            MigratedLegacyData = migratedLegacyData;
+            MigratedEditorPrefsData = migratedEditorPrefsData;
         }
 
         internal List<Bookmark> Items { get; }
-        internal bool MigratedLegacyData { get; }
+        internal bool MigratedEditorPrefsData { get; }
 
         internal static BookmarkStore Load()
         {
-            var storageKey = CreateStorageKey();
-            var hasCurrentData = EditorPrefs.HasKey(storageKey);
-            var items = hasCurrentData
-                ? Deserialize(EditorPrefs.GetString(storageKey, string.Empty))
-                : DeserializeLegacy(EditorPrefs.GetString(CreateLegacyKey(), string.Empty));
+            return Load(CreateStoragePath(), CreateStorageKey(), CreateLegacyKey());
+        }
 
-            Sanitize(items);
+        internal static BookmarkStore Load(string storagePath, string storageKey, string legacyKey)
+        {
+            var document = ReadDocument($"{storagePath}.tmp");
+            var recoveredFile = document != null;
+            if (document == null)
+            {
+                document = ReadDocument(storagePath);
+            }
 
-            var migratedLegacyData = !hasCurrentData && items.Count > 0;
-            var store = new BookmarkStore(storageKey, items, migratedLegacyData);
-            if (migratedLegacyData)
+            if (document == null)
+            {
+                document = ReadDocument($"{storagePath}.bak");
+                recoveredFile = document != null;
+            }
+
+            var migratedEditorPrefsData = document == null && HasEditorPrefsData(storageKey, legacyKey);
+            document ??= CreateDocumentFromEditorPrefs(storageKey, legacyKey);
+            document.Items ??= new List<Bookmark>();
+            Sanitize(document.Items);
+
+            var store = new BookmarkStore(storagePath, document.Items, migratedEditorPrefsData);
+            if (migratedEditorPrefsData || recoveredFile || document.SchemaVersion != CurrentSchemaVersion)
             {
                 store.Save();
             }
-            else
-            {
-                store.RefreshProjectPaths();
-            }
 
+            store.RefreshProjectPaths();
             return store;
         }
 
@@ -166,7 +178,13 @@ namespace AssetBookmarks.Editor
                 SchemaVersion = CurrentSchemaVersion,
                 Items = Items,
             };
-            EditorPrefs.SetString(storageKey, JsonUtility.ToJson(document));
+            WriteDocument(storagePath, document);
+        }
+
+        private static string CreateStoragePath()
+        {
+            var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            return Path.Combine(projectRoot, RelativeStoragePath);
         }
 
         private static string CreateStorageKey()
@@ -182,22 +200,81 @@ namespace AssetBookmarks.Editor
             return $"{LegacyKeyPrefix}{Application.productName}";
         }
 
-        private static List<Bookmark> Deserialize(string json)
+        private static bool HasEditorPrefsData(string storageKey, string legacyKey)
         {
-            if (string.IsNullOrWhiteSpace(json))
+            return EditorPrefs.HasKey(storageKey) || EditorPrefs.HasKey(legacyKey);
+        }
+
+        private static BookmarkDocument CreateDocumentFromEditorPrefs(string storageKey, string legacyKey)
+        {
+            var hasCurrentData = EditorPrefs.HasKey(storageKey);
+            var document = hasCurrentData
+                ? DeserializeDocument(EditorPrefs.GetString(storageKey, string.Empty))
+                : null;
+            document ??= new BookmarkDocument
             {
-                return new List<Bookmark>();
+                Items = DeserializeLegacy(EditorPrefs.GetString(legacyKey, string.Empty)),
+            };
+            document.SchemaVersion = CurrentSchemaVersion;
+            return document;
+        }
+
+        private static BookmarkDocument ReadDocument(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return null;
             }
 
             try
             {
-                var document = JsonUtility.FromJson<BookmarkDocument>(json);
-                return document?.Items ?? new List<Bookmark>();
+                return DeserializeDocument(File.ReadAllText(path));
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        private static BookmarkDocument DeserializeDocument(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonUtility.FromJson<BookmarkDocument>(json);
             }
             catch (ArgumentException)
             {
-                return new List<Bookmark>();
+                return null;
             }
+        }
+
+        private static void WriteDocument(string path, BookmarkDocument document)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(directory))
+            {
+                throw new InvalidOperationException($"Cannot determine the settings directory for '{path}'.");
+            }
+
+            Directory.CreateDirectory(directory);
+            var temporaryPath = $"{path}.tmp";
+            File.WriteAllText(temporaryPath, JsonUtility.ToJson(document, true));
+            if (File.Exists(path))
+            {
+                File.Replace(temporaryPath, path, $"{path}.bak");
+                return;
+            }
+
+            File.Move(temporaryPath, path);
         }
 
         private static List<Bookmark> DeserializeLegacy(string serializedItems)

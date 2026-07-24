@@ -77,10 +77,10 @@ namespace AssetBookmarks.Editor
             rootVisualElement.Add(CreateStatusLabel());
             RefreshView();
 
-            if (store.MigratedLegacyData)
+            if (store.MigratedEditorPrefsData)
             {
                 rootVisualElement.schedule.Execute(() =>
-                    ShowStatus("Existing bookmarks were upgraded to version 2."));
+                    ShowStatus("Existing bookmarks were migrated to UserSettings."));
             }
         }
 
