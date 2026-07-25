@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -136,6 +138,120 @@ namespace AssetBookmarks.Editor.Tests
 
             Assert.That(restoredStore.Items, Has.Count.EqualTo(2));
             Assert.That(File.Exists($"{storagePath}.tmp"), Is.False);
+        }
+
+        [Test]
+        public void NewStorageFileCopiesCurrentBookmarks()
+        {
+            var store = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            store.AddUrl("https://example.com/current/");
+            var sharedPath = Path.Combine(storageDirectory, "Shared.json");
+
+            BookmarkStore.PrepareStorageFile(storagePath, sharedPath);
+
+            var sharedStore = BookmarkStore.Load(sharedPath, storageKey, legacyKey);
+            Assert.That(sharedStore.Items, Has.Count.EqualTo(1));
+            Assert.That(sharedStore.Items[0].ResolvedPath, Is.EqualTo("https://example.com/current/"));
+        }
+
+        [Test]
+        public void ExistingStorageFileIsNotOverwritten()
+        {
+            var sharedPath = Path.Combine(storageDirectory, "Shared.json");
+            var sharedStore = BookmarkStore.Load(sharedPath, storageKey, legacyKey);
+            sharedStore.AddUrl("https://example.com/shared/");
+            var store = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            store.AddUrl("https://example.com/current/");
+
+            BookmarkStore.PrepareStorageFile(storagePath, sharedPath);
+
+            sharedStore = BookmarkStore.Load(sharedPath, storageKey, legacyKey);
+            Assert.That(sharedStore.Items, Has.Count.EqualTo(1));
+            Assert.That(sharedStore.Items[0].ResolvedPath, Is.EqualTo("https://example.com/shared/"));
+        }
+
+        [Test]
+        public void InvalidStorageFileIsRejected()
+        {
+            var sharedPath = Path.Combine(storageDirectory, "Invalid.json");
+            Directory.CreateDirectory(storageDirectory);
+            File.WriteAllText(sharedPath, "not json");
+
+            Assert.Throws<InvalidDataException>(
+                () => BookmarkStore.PrepareStorageFile(storagePath, sharedPath)
+            );
+        }
+
+        [Test]
+        public void IndependentStoresPreserveConcurrentAdds()
+        {
+            var firstStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            var secondStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+
+            firstStore.AddUrl("https://example.com/first/");
+            secondStore.AddUrl("https://example.com/second/");
+
+            var restoredStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            Assert.That(restoredStore.Items, Has.Count.EqualTo(2));
+            Assert.That(restoredStore.Items.Exists(item => item.ResolvedPath.EndsWith("/first/")), Is.True);
+            Assert.That(restoredStore.Items.Exists(item => item.ResolvedPath.EndsWith("/second/")), Is.True);
+        }
+
+        [Test]
+        public void StaleStoreEditPreservesConcurrentAdd()
+        {
+            var initialStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            initialStore.AddUrl("https://example.com/colored/");
+            var firstStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            var secondStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+
+            secondStore.AddUrl("https://example.com/keep/");
+            firstStore.SetColor(firstStore.Items[0], BookmarkColor.Blue);
+
+            var restoredStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            Assert.That(restoredStore.Items, Has.Count.EqualTo(2));
+            Assert.That(
+                restoredStore.Items.Find(item => item.ResolvedPath.EndsWith("/colored/")).Color,
+                Is.EqualTo(BookmarkColor.Blue)
+            );
+        }
+
+        [Test]
+        public void StoreReloadsChangesWrittenByAnotherInstance()
+        {
+            var firstStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            var secondStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            firstStore.AddUrl("https://example.com/shared/");
+
+            Assert.That(secondStore.ReloadIfChanged(), Is.True);
+            Assert.That(secondStore.Items, Has.Count.EqualTo(1));
+            Assert.That(secondStore.ReloadIfChanged(), Is.False);
+        }
+
+        [Test]
+        public void ConcurrentStoresSerializeWrites()
+        {
+            var firstStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            var secondStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            using var start = new ManualResetEventSlim(false);
+            var tasks = new[]
+            {
+                Task.Run(() => AddUrls(firstStore, "first", start)),
+                Task.Run(() => AddUrls(secondStore, "second", start)),
+            };
+            start.Set();
+
+            Assert.That(Task.WaitAll(tasks, 5000), Is.True);
+            Assert.That(BookmarkStore.Load(storagePath, storageKey, legacyKey).Items, Has.Count.EqualTo(20));
+        }
+
+        private static void AddUrls(BookmarkStore store, string prefix, ManualResetEventSlim start)
+        {
+            start.Wait();
+            for (var index = 0; index < 10; index++)
+            {
+                store.AddUrl($"https://example.com/{prefix}-{index}/");
+            }
         }
 
         [Serializable]

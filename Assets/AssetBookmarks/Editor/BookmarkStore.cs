@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
@@ -23,9 +24,10 @@ namespace AssetBookmarks.Editor
     internal sealed class BookmarkStore
     {
         private const int CurrentSchemaVersion = 2;
-        private const string RelativeStoragePath = "UserSettings/AssetBookmarks.json";
         private const string StorageKeyPrefix = "AssetBookmarks.v2";
         private const string LegacyKeyPrefix = "AssetBookmarks";
+        private const int LockRetryCount = 20;
+        private const int LockRetryDelayMs = 10;
 
         private readonly string storagePath;
 
@@ -41,38 +43,60 @@ namespace AssetBookmarks.Editor
 
         internal static BookmarkStore Load()
         {
-            return Load(CreateStoragePath(), CreateStorageKey(), CreateLegacyKey());
+            return Load(BookmarkStorageSettings.Current.StoragePath, CreateStorageKey(), CreateLegacyKey());
         }
 
         internal static BookmarkStore Load(string storagePath, string storageKey, string legacyKey)
         {
-            var document = ReadDocument($"{storagePath}.tmp");
-            var recoveredFile = document != null;
-            if (document == null)
+            var migratedEditorPrefsData = false;
+            var document = WithStorageLock(storagePath, () =>
             {
-                document = ReadDocument(storagePath);
-            }
+                var storedDocument = ReadStoredDocument(storagePath, out var recoveredFile);
+                migratedEditorPrefsData = storedDocument == null && HasEditorPrefsData(storageKey, legacyKey);
+                storedDocument = NormalizeDocument(
+                    storedDocument ?? CreateDocumentFromEditorPrefs(storageKey, legacyKey)
+                );
+                var refreshed = RefreshProjectPaths(storedDocument.Items);
+                refreshed |= RefreshSceneObjectNames(storedDocument.Items);
+                if (migratedEditorPrefsData ||
+                    recoveredFile ||
+                    refreshed ||
+                    storedDocument.SchemaVersion != CurrentSchemaVersion)
+                {
+                    storedDocument.SchemaVersion = CurrentSchemaVersion;
+                    WriteDocument(storagePath, storedDocument);
+                }
 
-            if (document == null)
+                return storedDocument;
+            });
+            return new BookmarkStore(storagePath, document.Items, migratedEditorPrefsData);
+        }
+
+        internal static void PrepareStorageFile(string sourcePath, string targetPath)
+        {
+            var sourceDocument = WithStorageLock(
+                sourcePath,
+                () => NormalizeDocument(ReadStoredDocument(sourcePath, out _))
+            );
+            WithStorageLock(targetPath, () =>
             {
-                document = ReadDocument($"{storagePath}.bak");
-                recoveredFile = document != null;
-            }
+                var targetDocument = ReadStoredDocument(targetPath, out var recoveredFile);
+                if ((targetDocument == null && File.Exists(targetPath)) ||
+                    (targetDocument != null && targetDocument.SchemaVersion <= 0))
+                {
+                    throw new InvalidDataException("The selected file is not an Asset Bookmarks JSON file.");
+                }
 
-            var migratedEditorPrefsData = document == null && HasEditorPrefsData(storageKey, legacyKey);
-            document ??= CreateDocumentFromEditorPrefs(storageKey, legacyKey);
-            document.Items ??= new List<Bookmark>();
-            Sanitize(document.Items);
-
-            var store = new BookmarkStore(storagePath, document.Items, migratedEditorPrefsData);
-            if (migratedEditorPrefsData || recoveredFile || document.SchemaVersion != CurrentSchemaVersion)
-            {
-                store.Save();
-            }
-
-            store.RefreshProjectPaths();
-            store.RefreshSceneObjectNames();
-            return store;
+                if (targetDocument == null)
+                {
+                    WriteDocument(targetPath, sourceDocument);
+                }
+                else if (recoveredFile)
+                {
+                    targetDocument.SchemaVersion = CurrentSchemaVersion;
+                    WriteDocument(targetPath, targetDocument);
+                }
+            });
         }
 
         internal BookmarkAddResult AddPaths(IEnumerable<string> paths)
@@ -109,23 +133,22 @@ namespace AssetBookmarks.Editor
 
             var added = 0;
             var duplicate = 0;
-            foreach (var bookmark in candidates)
+            Update(items =>
             {
-                if (Contains(bookmark))
+                foreach (var bookmark in candidates)
                 {
-                    duplicate++;
-                    continue;
+                    if (ContainsIdentity(items, bookmark))
+                    {
+                        duplicate++;
+                        continue;
+                    }
+
+                    items.Add(bookmark);
+                    added++;
                 }
 
-                Items.Add(bookmark);
-                added++;
-            }
-
-            if (added > 0)
-            {
-                Save();
-            }
-
+                return added > 0;
+            });
             return new BookmarkAddResult(added, duplicate, invalid);
         }
 
@@ -137,93 +160,133 @@ namespace AssetBookmarks.Editor
             }
 
             var bookmark = Bookmark.CreateUrl(normalizedUrl);
-            if (Contains(bookmark))
+            var duplicate = false;
+            Update(items =>
             {
-                return new BookmarkAddResult(0, 1, 0);
-            }
+                if (ContainsIdentity(items, bookmark))
+                {
+                    duplicate = true;
+                    return false;
+                }
 
-            Items.Add(bookmark);
-            Save();
-            return new BookmarkAddResult(1, 0, 0);
+                items.Add(bookmark);
+                return true;
+            });
+            return duplicate
+                ? new BookmarkAddResult(0, 1, 0)
+                : new BookmarkAddResult(1, 0, 0);
         }
 
         internal void Remove(Bookmark bookmark)
         {
-            if (Items.Remove(bookmark))
+            Update(items => items.RemoveAll(item => item.Id == bookmark.Id) > 0);
+        }
+
+        internal void SetOpenMode(Bookmark bookmark, BookmarkOpenMode mode)
+        {
+            Update(items =>
             {
-                Save();
-            }
+                var storedBookmark = FindById(items, bookmark.Id);
+                if (storedBookmark == null || storedBookmark.OpenMode == mode)
+                {
+                    return false;
+                }
+
+                storedBookmark.SetOpenMode(mode);
+                return true;
+            });
+        }
+
+        internal void SetColor(Bookmark bookmark, BookmarkColor color)
+        {
+            Update(items =>
+            {
+                var storedBookmark = FindById(items, bookmark.Id);
+                if (storedBookmark == null || storedBookmark.Color == color)
+                {
+                    return false;
+                }
+
+                storedBookmark.SetColor(color);
+                return true;
+            });
         }
 
         internal void ApplyVisibleOrder(IReadOnlyList<Bookmark> orderedVisibleItems)
         {
-            var visibleItems = new HashSet<Bookmark>(orderedVisibleItems);
-            var orderedIndex = 0;
-            var changed = false;
-            for (var index = 0; index < Items.Count; index++)
+            var orderedIds = new List<string>();
+            foreach (var item in orderedVisibleItems)
             {
-                if (!visibleItems.Contains(Items[index]))
+                orderedIds.Add(item.Id);
+            }
+
+            Update(items =>
+            {
+                var visibleIds = new HashSet<string>(orderedIds, StringComparer.Ordinal);
+                var orderedItems = new List<Bookmark>();
+                foreach (var id in orderedIds)
                 {
-                    continue;
+                    var item = FindById(items, id);
+                    if (item != null)
+                    {
+                        orderedItems.Add(item);
+                    }
                 }
 
-                var orderedItem = orderedVisibleItems[orderedIndex++];
-                changed |= !ReferenceEquals(Items[index], orderedItem);
-                Items[index] = orderedItem;
-            }
+                var orderedIndex = 0;
+                var changed = false;
+                for (var index = 0; index < items.Count; index++)
+                {
+                    if (!visibleIds.Contains(items[index].Id) || orderedIndex >= orderedItems.Count)
+                    {
+                        continue;
+                    }
 
-            if (changed)
-            {
-                Save();
-            }
+                    var orderedItem = orderedItems[orderedIndex++];
+                    changed |= items[index].Id != orderedItem.Id;
+                    items[index] = orderedItem;
+                }
+
+                return changed;
+            });
         }
 
         internal bool RefreshProjectPaths()
         {
-            var changed = false;
-            foreach (var bookmark in Items)
-            {
-                changed |= bookmark.RefreshProjectPath();
-            }
-
-            if (changed)
-            {
-                Save();
-            }
-
-            return changed;
+            return Update(RefreshProjectPaths);
         }
 
         internal bool RefreshSceneObjectNames()
         {
-            var changed = false;
-            foreach (var bookmark in Items)
-            {
-                changed |= bookmark.RefreshSceneObjectName();
-            }
-
-            if (changed)
-            {
-                Save();
-            }
-
-            return changed;
+            return Update(RefreshSceneObjectNames);
         }
 
-        internal void Save()
+        internal bool ReloadIfChanged()
         {
-            var document = new BookmarkDocument
+            var storedItems = WithStorageLock(storagePath, () =>
             {
-                SchemaVersion = CurrentSchemaVersion,
-                Items = Items,
-            };
-            WriteDocument(storagePath, document);
-        }
+                var document = ReadStoredDocument(storagePath, out var recoveredFile);
+                if (document == null)
+                {
+                    return null;
+                }
 
-        private static string CreateStoragePath()
-        {
-            var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            return Path.Combine(projectRoot, RelativeStoragePath);
+                document = NormalizeDocument(document);
+                if (recoveredFile || document.SchemaVersion != CurrentSchemaVersion)
+                {
+                    document.SchemaVersion = CurrentSchemaVersion;
+                    WriteDocument(storagePath, document);
+                }
+
+                return document.Items;
+            });
+            if (storedItems == null || ItemsEqual(Items, storedItems))
+            {
+                return false;
+            }
+
+            ReplaceItems(storedItems);
+            return true;
         }
 
         private static string CreateStorageKey()
@@ -279,6 +342,24 @@ namespace AssetBookmarks.Editor
             }
         }
 
+        private static BookmarkDocument ReadStoredDocument(string path, out bool recoveredFile)
+        {
+            var document = ReadDocument($"{path}.tmp");
+            recoveredFile = document != null;
+            if (document == null)
+            {
+                document = ReadDocument(path);
+            }
+
+            if (document == null)
+            {
+                document = ReadDocument($"{path}.bak");
+                recoveredFile = document != null;
+            }
+
+            return document;
+        }
+
         private static BookmarkDocument DeserializeDocument(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
@@ -314,6 +395,83 @@ namespace AssetBookmarks.Editor
             }
 
             File.Move(temporaryPath, path);
+        }
+
+        private static void WithStorageLock(string path, Action action)
+        {
+            using (AcquireStorageLock(path))
+            {
+                action();
+            }
+        }
+
+        private static T WithStorageLock<T>(string path, Func<T> action)
+        {
+            using (AcquireStorageLock(path))
+            {
+                return action();
+            }
+        }
+
+        private static FileStream AcquireStorageLock(string path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(directory))
+            {
+                throw new InvalidOperationException($"Cannot determine the settings directory for '{path}'.");
+            }
+
+            Directory.CreateDirectory(directory);
+            var lockPath = $"{path}.lock";
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    return new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                }
+                catch (IOException) when (attempt < LockRetryCount - 1)
+                {
+                    Thread.Sleep(LockRetryDelayMs);
+                }
+            }
+        }
+
+        private bool Update(Func<List<Bookmark>, bool> update)
+        {
+            List<Bookmark> storedItems = null;
+            var changed = WithStorageLock(storagePath, () =>
+            {
+                var document = ReadStoredDocument(storagePath, out var recoveredFile);
+                document = NormalizeDocument(document);
+                var contentChanged = update(document.Items);
+                if (contentChanged || recoveredFile || document.SchemaVersion != CurrentSchemaVersion)
+                {
+                    document.SchemaVersion = CurrentSchemaVersion;
+                    WriteDocument(storagePath, document);
+                }
+
+                storedItems = document.Items;
+                return contentChanged;
+            });
+            ReplaceItems(storedItems);
+            return changed;
+        }
+
+        private static bool ItemsEqual(List<Bookmark> first, List<Bookmark> second)
+        {
+            return JsonUtility.ToJson(new BookmarkDocument { Items = first }) ==
+                   JsonUtility.ToJson(new BookmarkDocument { Items = second });
+        }
+
+        private void ReplaceItems(List<Bookmark> items)
+        {
+            Items.Clear();
+            Items.AddRange(items);
+        }
+
+        private static Bookmark FindById(List<Bookmark> items, string id)
+        {
+            return items.Find(item => item.Id == id);
         }
 
         private static List<Bookmark> DeserializeLegacy(string serializedItems)
@@ -394,10 +552,40 @@ namespace AssetBookmarks.Editor
             }
         }
 
-        private bool Contains(Bookmark candidate)
+        private static BookmarkDocument NormalizeDocument(BookmarkDocument document)
+        {
+            document ??= new BookmarkDocument { SchemaVersion = CurrentSchemaVersion };
+            document.Items ??= new List<Bookmark>();
+            Sanitize(document.Items);
+            return document;
+        }
+
+        private static bool RefreshProjectPaths(List<Bookmark> items)
+        {
+            var changed = false;
+            foreach (var bookmark in items)
+            {
+                changed |= bookmark.RefreshProjectPath();
+            }
+
+            return changed;
+        }
+
+        private static bool RefreshSceneObjectNames(List<Bookmark> items)
+        {
+            var changed = false;
+            foreach (var bookmark in items)
+            {
+                changed |= bookmark.RefreshSceneObjectName();
+            }
+
+            return changed;
+        }
+
+        private static bool ContainsIdentity(List<Bookmark> items, Bookmark candidate)
         {
             var candidateIdentity = GetIdentity(candidate);
-            return Items.Exists(item =>
+            return items.Exists(item =>
                 StringComparer.Ordinal.Equals(GetIdentity(item), candidateIdentity));
         }
 

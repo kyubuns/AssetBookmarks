@@ -14,7 +14,7 @@
 - 全体のEditモードは設けない。動作変更、Scene内GameObjectのOpen Scene、Copy Path、移動、削除は項目ごとの右クリックメニューに置く。
 - Bookmarkの色分けは右クリックの `Color` サブメニューから解除と7色を選ぶ。行高や余白を増やさず、Unityテーマの背景とhoverを残す共通の半透明paletteで行全体へ表示し、Dark/Light別の色分岐は持たない。
 - 右端グリップは `ListView` と `canStartDrag` を使う並べ替え専用、行本体はBookmark対象をUnity標準のドラッグpayloadとして外へ渡す。Asset種別ごとのdrop挙動は受け側へ委ね、Prefab専用処理は持たない。
-- Small、Medium、Largeの表示設定で文字、アイコン、行高をまとめて変える。
+- `Aa` メニューではSmall、Medium、Largeの表示設定で文字、アイコン、行高をまとめて変え、Preferencesの保存先設定も開けるようにする。
 - Editor背景は塗りつぶさずUnityのホスト背景を継承し、Bookmarkの色分け以外で色が必要な要素にはUnity USSテーマ変数を使う。
 - 一時的なステータスはリストの高さを消費せず、縦幅が狭い場合も読める1行のオーバーレイとして表示する。
 
@@ -23,10 +23,11 @@
 - Unity内のファイルとフォルダはGUIDで保持し、移動・リネーム後のパスを解決する。Scene内GameObjectは `GlobalObjectId` で保持し、`GameObject名 (Scene名)` と表示して、保存済みSceneが開いている時だけHierarchyで選択可能にする。Sceneが閉じていても右クリックの **Open Scene** から対象Sceneを開けるようにする。
 - 新規Sceneの既定動作は **Open in Unity**、その他のUnity Assetは **Select in Project** とする。
 - 外部ファイルとフォルダは既定アプリで開く。WebサイトはHTTP/HTTPSのみ受け付け、省略されたschemeには `https://` を補う。表示や可用性確認のためのネットワークアクセスは行わない。
-- Bookmarkは標準のUnity `.gitignore`で除外される `UserSettings/AssetBookmarks.json` へ即時・置換保存し、現行v2および旧v1の `EditorPrefs` データから初回移行する。DisplaySizeは互換移行せず、軽量なUI設定として `EditorPrefs` に保持する。
+- Bookmarkは既定で `UserSettings/AssetBookmarks.json` へ保存する。明示指定したJSONへ切替可能とし、選択はworktree固有の `UserSettings/AssetBookmarksSettings.asset` に保存する。新規ファイルには現在のBookmarkをコピーし、既存ファイルはそのまま読み込む。v1/v2の `EditorPrefs` データは初回移行し、DisplaySizeは `EditorPrefs` に保持する。
 
 ## Implementation
 
 - UIはUI Toolkitで実装し、Unityが提供するAPIと標準挙動で解決できる処理を独自実装しない。機能追加後は重複、不要な状態、分岐を見直してコードを簡潔に保つ。
-- 常駐ポーリングや毎フレーム処理を置かずイベント駆動にする。`ListView` の通常更新では行を再生成せず再利用し、表示、検索、存在確認だけのためにAsset本体をロードしない。
-- Scene既定動作、GUIDリネーム追従、Scene GameObjectの保存・解決・選択・Sceneオープン、URL正規化、外向きドラッグpayload、色の保存互換、v1/v2保存移行のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。
+- 常駐ポーリングや毎フレーム処理を置かずイベント駆動にする。`ListView` の通常更新では行を再生成せず再利用し、表示、検索、存在確認だけのためにAsset本体をロードしない。外部の保存更新はWindowのフォーカス時に再読込する。
+- Bookmarkの変更はファイルロック中に最新JSONへ適用して原子的に置換保存し、同じ保存先を使う複数Editor間で更新を失わないようにする。
+- Scene既定動作、GUIDリネーム追従、Scene GameObject、URL、外向きドラッグ、色、v1/v2保存移行、共有保存のEditModeテストを維持する。Unity Player buildは不要で、Editorコンパイルとテストを検証する。

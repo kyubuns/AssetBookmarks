@@ -4,6 +4,14 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- An optional custom bookmark storage file in **Preferences > Asset Bookmarks**, also accessible from **Aa > Settings…**.
+
+### Changed
+
+- Coordinate bookmark writes across Editor instances and reload external changes when the window regains focus.
+
 ## [2.4.1] - 2026-07-24
 
 ### Added

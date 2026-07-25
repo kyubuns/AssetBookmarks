@@ -45,13 +45,24 @@ namespace AssetBookmarks.Editor
             EditorApplication.projectChanged += OnProjectChanged;
             EditorApplication.hierarchyChanged -= OnHierarchyChanged;
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
+            BookmarkStorageSettings.Current.Changed -= OnStorageSettingsChanged;
+            BookmarkStorageSettings.Current.Changed += OnStorageSettingsChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.projectChanged -= OnProjectChanged;
             EditorApplication.hierarchyChanged -= OnHierarchyChanged;
+            BookmarkStorageSettings.Current.Changed -= OnStorageSettingsChanged;
             statusDismissal?.Pause();
+        }
+
+        private void OnFocus()
+        {
+            if (store?.ReloadIfChanged() == true)
+            {
+                RefreshView();
+            }
         }
 
         public void CreateGUI()
@@ -83,7 +94,7 @@ namespace AssetBookmarks.Editor
             if (store.MigratedEditorPrefsData)
             {
                 rootVisualElement.schedule.Execute(() =>
-                    ShowStatus("Existing bookmarks were migrated to UserSettings."));
+                    ShowStatus("Existing bookmarks were migrated to the storage file."));
             }
         }
 
@@ -119,11 +130,13 @@ namespace AssetBookmarks.Editor
             toolbar.Add(addMenu);
 
             var optionsMenu = new ToolbarMenu { text = "Aa" };
-            optionsMenu.tooltip = "Display size";
+            optionsMenu.tooltip = "Options";
             optionsMenu.AddToClassList("asset-bookmarks__options-button");
             AppendDisplaySizeOption(optionsMenu, DisplaySize.Small);
             AppendDisplaySizeOption(optionsMenu, DisplaySize.Medium);
             AppendDisplaySizeOption(optionsMenu, DisplaySize.Large);
+            optionsMenu.menu.AppendSeparator();
+            optionsMenu.menu.AppendAction("Settings…", _ => AssetBookmarksSettingsProvider.Open());
             toolbar.Add(optionsMenu);
 
             return toolbar;
@@ -422,8 +435,7 @@ namespace AssetBookmarks.Editor
 
         private void SetOpenMode(Bookmark bookmark, BookmarkOpenMode mode)
         {
-            bookmark.SetOpenMode(mode);
-            store.Save();
+            store.SetOpenMode(bookmark, mode);
             RefreshView();
         }
 
@@ -434,9 +446,8 @@ namespace AssetBookmarks.Editor
                 return;
             }
 
-            bookmark.SetColor(color);
-            store.Save();
-            listView.RefreshItems();
+            store.SetColor(bookmark, color);
+            RefreshView();
         }
 
         private void MoveBookmark(Bookmark bookmark, int offset)
@@ -514,6 +525,12 @@ namespace AssetBookmarks.Editor
         private void OnHierarchyChanged()
         {
             store?.RefreshSceneObjectNames();
+            RefreshView();
+        }
+
+        private void OnStorageSettingsChanged()
+        {
+            store = BookmarkStore.Load();
             RefreshView();
         }
 

@@ -18,7 +18,7 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 - Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
 - Keep Unity asset bookmarks working after files are moved or renamed.
 - Color-code and reorder rows, and choose from three compact display sizes.
-- Save changes automatically and locally for each project.
+- Save changes automatically to the project-local default or an optional shared JSON file.
 
 ## Requirements
 
@@ -68,7 +68,11 @@ External files and folders always open with their default application. Website b
 
 ## Storage
 
-Bookmarks are saved in `UserSettings/AssetBookmarks.json`, which is excluded by the standard Unity `.gitignore`. They remain local to each project and computer.
+Bookmarks are saved in `UserSettings/AssetBookmarks.json` by default, which is excluded by the standard Unity `.gitignore`.
+
+To share bookmarks between worktrees or project copies, open **Aa > Settings…** and select the same custom JSON file in each Editor. A new file starts as a copy of the current bookmarks; selecting an existing file loads its bookmarks instead. Concurrent Editor instances coordinate writes and refresh external changes when the window regains focus.
+
+The selection is stored per project in `UserSettings/AssetBookmarksSettings.asset`. Custom storage also keeps `.lock` and `.bak` files beside the selected JSON.
 
 Unity asset bookmarks follow moved or renamed assets, and Scene GameObject bookmarks follow renamed objects. Existing bookmarks stored by version 1 or earlier version 2 releases are imported automatically.
 
