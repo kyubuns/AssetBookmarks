@@ -4,6 +4,8 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-07-25
+
 ### Added
 
 - An optional custom bookmark storage file in **Preferences > Asset Bookmarks**, also accessible from **Aa > Settings…**.
