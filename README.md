@@ -1,6 +1,6 @@
 # Asset Bookmarks
 
-Asset Bookmarks is a simple, lightweight bookmark window for Unity—keep project assets, files and folders outside your Unity project, and websites just one click away.
+Asset Bookmarks is a simple, lightweight bookmark window for Unity—keep project assets, Unity menu commands, files and folders outside your Unity project, and websites just one click away.
 
 https://github.com/user-attachments/assets/2be31124-1b9c-4079-a260-695ae99c118b
 
@@ -12,9 +12,10 @@ Version 2 is a complete UI Toolkit rewrite with a clearer interface, automatic s
 
 ## Features
 
-- Bookmark Unity assets, GameObjects in saved Scenes, external files and folders, and websites such as Jenkins jobs.
+- Bookmark Unity assets, GameObjects in saved Scenes, Unity menu items, external files and folders, and websites such as Jenkins jobs.
 - Add bookmarks by drag and drop or from the compact **+** menu.
-- Search instantly by name or path.
+- Rename any bookmark while retaining its original target, and reset it by saving a blank name.
+- Search instantly using independently configurable path, default-name, and custom-name fields.
 - Choose what happens when a Unity asset is clicked.
 - Select bookmarked GameObjects in the Hierarchy while their Scene is open, or open that Scene from the row menu.
 - Drag bookmarked assets back into compatible Unity windows, including Prefabs into the Scene or Hierarchy.
@@ -43,17 +44,17 @@ Open **Window > Asset Bookmarks**.
 Add bookmarks in either of these ways:
 
 - Drag assets from the Project window, GameObjects from the Hierarchy, or files and folders from Finder or Explorer anywhere onto the window.
-- Use the **+** menu to add selected Unity assets or GameObjects, external files or folders, or a website.
+- Use the **+** menu to add selected Unity assets or GameObjects, choose a Unity menu item from a searchable list, or add an external file, folder, or website.
 
 Website bookmarks support HTTP and HTTPS. If the scheme is omitted, `https://` is added automatically.
 
 Scene GameObjects appear as `GameObject (Scene)`. They can be selected and pinged in the Hierarchy only while their saved Scene is open; otherwise the row remains visible but disabled. Use **Open Scene** in the row's context menu to open it.
 
-Click a row to use the bookmark. Type in the search field to filter the list. Right-click a row to assign a color, change its action, copy its path, move it, or remove it.
+Click a row to use the bookmark. Unity menu item bookmarks run the same command as the corresponding Editor menu. Type in the search field to filter the list. Right-click a row to rename it, assign a color, change its action, copy its path, move it, or remove it. Leaving the rename field blank restores the default name, which remains visible as the field's placeholder.
 
-Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. Open-Scene GameObjects, external files, and external folders can also be dragged; websites cannot.
+Drag the row body into another compatible Unity window to reuse the bookmarked item. Prefabs can be placed in the Scene or Hierarchy just like assets from the Project window. Open-Scene GameObjects, external files, and external folders can also be dragged; websites and Unity menu items cannot.
 
-Drag the right-edge grip to reorder rows. Use **Aa** to choose Small, Medium, or Large.
+Drag the right-edge grip to reorder rows. Use **Aa** to choose Small, Medium, or Large. In **Aa > Settings…**, choose whether search uses paths, default names, custom names, or any combination of them.
 
 New Scene bookmarks use **Open in Unity** by default. Other Unity assets use **Select in Project**.
 
@@ -66,7 +67,7 @@ New Scene bookmarks use **Open in Unity** by default. Other Unity assets use **S
 | Reveal in Finder | Reveals the asset in Finder, Explorer, or the platform file manager. |
 | Open in Default App | Opens the asset with the operating system's associated application. |
 
-External files and folders always open with their default application. Website bookmarks open in the default browser.
+External files and folders always open with their default application. Website bookmarks open in the default browser. Unity menu item bookmarks show as unavailable if their command is no longer installed.
 
 ## Storage
 

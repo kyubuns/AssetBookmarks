@@ -4,6 +4,12 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Searchable Unity menu item bookmarks that run Editor menu commands from the bookmark list.
+- Custom names for every bookmark, with the default name shown as the blank rename field's placeholder.
+- Per-user search-field preferences for paths, default names, and custom names.
+
 ## [2.5.0] - 2026-07-25
 
 ### Added
