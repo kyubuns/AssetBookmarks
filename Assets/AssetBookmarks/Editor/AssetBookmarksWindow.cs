@@ -47,6 +47,8 @@ namespace AssetBookmarks.Editor
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
             BookmarkStorageSettings.Current.Changed -= OnStorageSettingsChanged;
             BookmarkStorageSettings.Current.Changed += OnStorageSettingsChanged;
+            BookmarkSearchSettings.Changed -= OnSearchSettingsChanged;
+            BookmarkSearchSettings.Changed += OnSearchSettingsChanged;
         }
 
         private void OnDisable()
@@ -54,6 +56,7 @@ namespace AssetBookmarks.Editor
             EditorApplication.projectChanged -= OnProjectChanged;
             EditorApplication.hierarchyChanged -= OnHierarchyChanged;
             BookmarkStorageSettings.Current.Changed -= OnStorageSettingsChanged;
+            BookmarkSearchSettings.Changed -= OnSearchSettingsChanged;
             statusDismissal?.Pause();
         }
 
@@ -104,7 +107,7 @@ namespace AssetBookmarks.Editor
             toolbar.AddToClassList("asset-bookmarks__toolbar");
 
             var searchField = new ToolbarSearchField();
-            searchField.tooltip = "Filter by name or path";
+            searchField.tooltip = "Filter using the search fields selected in Preferences";
             searchField.AddToClassList("asset-bookmarks__search");
             searchField.RegisterValueChangedCallback(evt =>
             {
@@ -450,6 +453,21 @@ namespace AssetBookmarks.Editor
             RefreshView();
         }
 
+        internal void RenameBookmark(string bookmarkId, string customName)
+        {
+            var bookmark = store.Items.Find(item => item.Id == bookmarkId);
+            if (bookmark == null)
+            {
+                return;
+            }
+
+            store.SetCustomName(bookmark, customName);
+            RefreshView();
+            ShowStatus(string.IsNullOrWhiteSpace(customName)
+                ? "Bookmark name reset."
+                : "Bookmark renamed.");
+        }
+
         private void MoveBookmark(Bookmark bookmark, int offset)
         {
             var currentIndex = visibleItems.IndexOf(bookmark);
@@ -534,6 +552,11 @@ namespace AssetBookmarks.Editor
             RefreshView();
         }
 
+        private void OnSearchSettingsChanged()
+        {
+            RefreshView();
+        }
+
         private void RefreshView()
         {
             if (listView == null)
@@ -557,19 +580,16 @@ namespace AssetBookmarks.Editor
         private void RebuildVisibleItems()
         {
             visibleItems.Clear();
-            var query = searchQuery?.Trim();
-            if (string.IsNullOrEmpty(query))
+            if (string.IsNullOrWhiteSpace(searchQuery))
             {
                 visibleItems.AddRange(store.Items);
                 return;
             }
 
+            var searchFields = BookmarkSearchSettings.Fields;
             foreach (var bookmark in store.Items)
             {
-                var resolvedPath = bookmark.ResolvedPath;
-                var displayName = bookmark.GetDisplayName(resolvedPath);
-                if (displayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    resolvedPath.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (BookmarkSearch.Matches(bookmark, searchQuery, searchFields))
                 {
                     visibleItems.Add(bookmark);
                 }
@@ -653,8 +673,8 @@ namespace AssetBookmarks.Editor
 
                 tooltip = inactiveSceneObject
                     ? "Open this GameObject's scene to select it."
-                    : resolvedPath;
-                nameLabel.text = item.GetDisplayName(resolvedPath);
+                    : GetTooltip(item, resolvedPath);
+                nameLabel.text = item.DisplayName;
                 nameLabel.tooltip = tooltip;
                 actionLabel.text = BookmarkActions.GetActionLabel(item);
                 icon.image = GetIcon(item, resolvedPath, isAvailable);
@@ -688,6 +708,7 @@ namespace AssetBookmarks.Editor
                             : DropdownMenuAction.Status.Disabled);
                 }
 
+                evt.menu.AppendAction("Rename…", _ => RenameBookmarkWindow.Show(window, bookmark));
                 evt.menu.AppendAction("Copy Path", _ => GUIUtility.systemCopyBuffer = bookmark.ResolvedPath);
                 evt.menu.AppendSeparator();
                 AppendColorMenu(evt.menu);
@@ -777,6 +798,13 @@ namespace AssetBookmarks.Editor
 
                 var iconName = Directory.Exists(resolvedPath) ? "Folder Icon" : "DefaultAsset Icon";
                 return EditorGUIUtility.IconContent(iconName).image;
+            }
+
+            private static string GetTooltip(Bookmark item, string resolvedPath)
+            {
+                return string.IsNullOrEmpty(item.CustomName)
+                    ? resolvedPath
+                    : $"Default name: {item.GetDefaultDisplayName(resolvedPath)}\nPath: {resolvedPath}";
             }
         }
 

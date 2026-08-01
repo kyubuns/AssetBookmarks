@@ -229,6 +229,19 @@ namespace AssetBookmarks.Editor.Tests
         }
 
         [Test]
+        public void CustomNamePersistsInStorageFile()
+        {
+            var store = BookmarkStore.Load(storagePath, storageKey, legacyKey);
+            store.AddUrl("https://example.com/default-name/");
+
+            store.SetCustomName(store.Items[0], "Custom Name");
+
+            var restoredBookmark = BookmarkStore.Load(storagePath, storageKey, legacyKey).Items[0];
+            Assert.That(restoredBookmark.CustomName, Is.EqualTo("Custom Name"));
+            Assert.That(restoredBookmark.DisplayName, Is.EqualTo("Custom Name"));
+        }
+
+        [Test]
         public void ConcurrentStoresSerializeWrites()
         {
             var firstStore = BookmarkStore.Load(storagePath, storageKey, legacyKey);

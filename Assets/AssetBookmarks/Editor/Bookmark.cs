@@ -44,6 +44,7 @@ namespace AssetBookmarks.Editor
         [SerializeField] private BookmarkKind kind;
         [SerializeField] private BookmarkOpenMode openMode;
         [SerializeField] private BookmarkColor color;
+        [SerializeField] private string customName;
         [NonSerialized] private GameObject resolvedSceneObject;
 
         private Bookmark()
@@ -57,6 +58,7 @@ namespace AssetBookmarks.Editor
         internal BookmarkKind Kind => kind;
         internal BookmarkOpenMode OpenMode => openMode;
         internal BookmarkColor Color => color;
+        internal string CustomName => customName;
 
         internal string ResolvedPath
         {
@@ -78,7 +80,9 @@ namespace AssetBookmarks.Editor
             }
         }
 
-        internal string DisplayName => GetDisplayName(ResolvedPath);
+        internal string DefaultDisplayName => GetDefaultDisplayName(ResolvedPath);
+
+        internal string DisplayName => string.IsNullOrEmpty(customName) ? DefaultDisplayName : customName;
 
         internal bool IsAvailable => TryResolveTarget(out _);
 
@@ -117,7 +121,7 @@ namespace AssetBookmarks.Editor
             return File.Exists(resolvedPath) || Directory.Exists(resolvedPath);
         }
 
-        internal string GetDisplayName(string resolvedPath)
+        internal string GetDefaultDisplayName(string resolvedPath)
         {
             if (kind == BookmarkKind.SceneObject)
             {
@@ -311,6 +315,7 @@ namespace AssetBookmarks.Editor
 
             assetGuid = assetGuid ?? string.Empty;
             globalObjectId = globalObjectId ?? string.Empty;
+            customName = NormalizeCustomName(customName);
             if (!Enum.IsDefined(typeof(BookmarkColor), color))
             {
                 color = BookmarkColor.None;
@@ -377,6 +382,11 @@ namespace AssetBookmarks.Editor
             color = value;
         }
 
+        internal void SetCustomName(string value)
+        {
+            customName = NormalizeCustomName(value);
+        }
+
         internal static bool TryNormalizeUrl(string value, out string normalizedUrl)
         {
             normalizedUrl = string.Empty;
@@ -413,6 +423,11 @@ namespace AssetBookmarks.Editor
             var separatorIndex = path.LastIndexOf('/');
             var name = separatorIndex >= 0 ? path.Substring(separatorIndex + 1) : path;
             return string.IsNullOrEmpty(name) ? uri.Host : $"{name} · {uri.Host}";
+        }
+
+        private static string NormalizeCustomName(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
     }
 }

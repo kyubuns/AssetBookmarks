@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace AssetBookmarks.Editor
@@ -25,10 +26,23 @@ namespace AssetBookmarks.Editor
 
         private static void Build(VisualElement root)
         {
+            root.Clear();
             var settings = BookmarkStorageSettings.Current;
             root.style.paddingTop = 8f;
             root.style.paddingLeft = 8f;
             root.style.paddingRight = 8f;
+
+            var searchHeading = new Label("Search Fields");
+            searchHeading.style.unityFontStyleAndWeight = FontStyle.Bold;
+            root.Add(searchHeading);
+            AddSearchFieldToggle(root, "Path", BookmarkSearchFields.Path);
+            AddSearchFieldToggle(root, "Default Name", BookmarkSearchFields.DefaultName);
+            AddSearchFieldToggle(root, "Custom Name", BookmarkSearchFields.CustomName);
+
+            var storageHeading = new Label("Storage");
+            storageHeading.style.unityFontStyleAndWeight = FontStyle.Bold;
+            storageHeading.style.marginTop = 12f;
+            root.Add(storageHeading);
 
             var pathField = new TextField("Storage File") { value = settings.StoragePath };
             root.Add(pathField);
@@ -73,6 +87,18 @@ namespace AssetBookmarks.Editor
             var defaultPath = new Label($"Default: {settings.DefaultStoragePath}");
             defaultPath.style.opacity = 0.6f;
             root.Add(defaultPath);
+        }
+
+        private static void AddSearchFieldToggle(
+            VisualElement root,
+            string label,
+            BookmarkSearchFields field
+        )
+        {
+            var toggle = new Toggle(label) { value = BookmarkSearchSettings.Includes(field) };
+            toggle.RegisterValueChangedCallback(evt =>
+                BookmarkSearchSettings.SetIncluded(field, evt.newValue));
+            root.Add(toggle);
         }
     }
 }

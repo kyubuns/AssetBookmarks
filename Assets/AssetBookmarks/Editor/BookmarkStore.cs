@@ -212,6 +212,22 @@ namespace AssetBookmarks.Editor
             });
         }
 
+        internal void SetCustomName(Bookmark bookmark, string customName)
+        {
+            Update(items =>
+            {
+                var storedBookmark = FindById(items, bookmark.Id);
+                if (storedBookmark == null)
+                {
+                    return false;
+                }
+
+                var previousName = storedBookmark.CustomName;
+                storedBookmark.SetCustomName(customName);
+                return storedBookmark.CustomName != previousName;
+            });
+        }
+
         internal void ApplyVisibleOrder(IReadOnlyList<Bookmark> orderedVisibleItems)
         {
             var orderedIds = new List<string>();
