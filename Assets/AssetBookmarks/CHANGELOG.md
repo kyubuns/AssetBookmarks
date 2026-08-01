@@ -4,6 +4,8 @@ All notable changes to Asset Bookmarks are documented in this file.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-08-01
+
 ### Added
 
 - Searchable Unity menu item bookmarks that run Editor menu commands from the bookmark list.
