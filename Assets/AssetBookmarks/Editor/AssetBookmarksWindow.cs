@@ -125,6 +125,7 @@ namespace AssetBookmarks.Editor
                 _ => HasSelectedItems()
                     ? DropdownMenuAction.Status.Normal
                     : DropdownMenuAction.Status.Disabled);
+            addMenu.menu.AppendAction("Unity Menu Item…", _ => AddMenuItemWindow.Show(this));
             addMenu.menu.AppendSeparator();
             addMenu.menu.AppendAction("External File…", _ => AddExternalFile());
             addMenu.menu.AppendAction("External Folder…", _ => AddExternalFolder());
@@ -430,6 +431,18 @@ namespace AssetBookmarks.Editor
             return result;
         }
 
+        internal BookmarkAddResult AddMenuItem(string menuPath)
+        {
+            var result = store.AddMenuItem(menuPath);
+            if (result.Added > 0)
+            {
+                RefreshView();
+                ShowStatus("Menu item bookmarked.");
+            }
+
+            return result;
+        }
+
         private void RemoveBookmark(Bookmark bookmark)
         {
             store.Remove(bookmark);
@@ -530,7 +543,9 @@ namespace AssetBookmarks.Editor
         {
             if (!BookmarkActions.Open(bookmark))
             {
-                ShowStatus("The bookmarked item no longer exists.");
+                ShowStatus(bookmark.Kind == BookmarkKind.MenuItem
+                    ? "The menu item is currently unavailable."
+                    : "The bookmarked item no longer exists.");
             }
         }
 
@@ -793,6 +808,14 @@ namespace AssetBookmarks.Editor
                     var webIcon = EditorGUIUtility.IconContent("BuildSettings.Web.Small").image;
                     return webIcon != null
                         ? webIcon
+                        : EditorGUIUtility.IconContent("DefaultAsset Icon").image;
+                }
+
+                if (bookmark.Kind == BookmarkKind.MenuItem)
+                {
+                    var menuIcon = EditorGUIUtility.IconContent("_Popup").image;
+                    return menuIcon != null
+                        ? menuIcon
                         : EditorGUIUtility.IconContent("DefaultAsset Icon").image;
                 }
 

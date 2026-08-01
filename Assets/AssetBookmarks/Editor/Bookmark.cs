@@ -12,6 +12,7 @@ namespace AssetBookmarks.Editor
         External,
         Url,
         SceneObject,
+        MenuItem,
     }
 
     internal enum BookmarkOpenMode
@@ -118,6 +119,11 @@ namespace AssetBookmarks.Editor
                 return TryNormalizeUrl(resolvedPath, out _);
             }
 
+            if (kind == BookmarkKind.MenuItem)
+            {
+                return BookmarkMenuItems.Contains(resolvedPath);
+            }
+
             return File.Exists(resolvedPath) || Directory.Exists(resolvedPath);
         }
 
@@ -143,6 +149,11 @@ namespace AssetBookmarks.Editor
             if (kind == BookmarkKind.Url)
             {
                 return GetUrlDisplayName(resolvedPath);
+            }
+
+            if (kind == BookmarkKind.MenuItem)
+            {
+                return GetMenuItemDisplayName(resolvedPath);
             }
 
             var trimmedPath = resolvedPath.TrimEnd('/', '\\');
@@ -261,6 +272,19 @@ namespace AssetBookmarks.Editor
             };
         }
 
+        internal static Bookmark CreateMenuItem(string menuPath)
+        {
+            return new Bookmark
+            {
+                id = Guid.NewGuid().ToString("N"),
+                path = menuPath,
+                assetGuid = string.Empty,
+                globalObjectId = string.Empty,
+                kind = BookmarkKind.MenuItem,
+                openMode = BookmarkOpenMode.Open,
+            };
+        }
+
         internal static bool CanCreateSceneObject(GameObject gameObject)
         {
             return gameObject != null &&
@@ -334,6 +358,11 @@ namespace AssetBookmarks.Editor
             if (kind == BookmarkKind.External || kind == BookmarkKind.Url)
             {
                 openMode = BookmarkOpenMode.DefaultApplication;
+            }
+            else if (kind == BookmarkKind.MenuItem)
+            {
+                path = path.Trim();
+                openMode = BookmarkOpenMode.Open;
             }
             else if (kind == BookmarkKind.SceneObject)
             {
@@ -423,6 +452,14 @@ namespace AssetBookmarks.Editor
             var separatorIndex = path.LastIndexOf('/');
             var name = separatorIndex >= 0 ? path.Substring(separatorIndex + 1) : path;
             return string.IsNullOrEmpty(name) ? uri.Host : $"{name} · {uri.Host}";
+        }
+
+        private static string GetMenuItemDisplayName(string menuPath)
+        {
+            var separatorIndex = menuPath.LastIndexOf('/');
+            return separatorIndex >= 0 && separatorIndex < menuPath.Length - 1
+                ? menuPath.Substring(separatorIndex + 1)
+                : menuPath;
         }
 
         private static string NormalizeCustomName(string value)

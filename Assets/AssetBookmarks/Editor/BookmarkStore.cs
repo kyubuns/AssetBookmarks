@@ -177,6 +177,31 @@ namespace AssetBookmarks.Editor
                 : new BookmarkAddResult(1, 0, 0);
         }
 
+        internal BookmarkAddResult AddMenuItem(string menuPath)
+        {
+            if (string.IsNullOrWhiteSpace(menuPath))
+            {
+                return new BookmarkAddResult(0, 0, 1);
+            }
+
+            var bookmark = Bookmark.CreateMenuItem(menuPath.Trim());
+            var duplicate = false;
+            Update(items =>
+            {
+                if (ContainsIdentity(items, bookmark))
+                {
+                    duplicate = true;
+                    return false;
+                }
+
+                items.Add(bookmark);
+                return true;
+            });
+            return duplicate
+                ? new BookmarkAddResult(0, 1, 0)
+                : new BookmarkAddResult(1, 0, 0);
+        }
+
         internal void Remove(Bookmark bookmark)
         {
             Update(items => items.RemoveAll(item => item.Id == bookmark.Id) > 0);
@@ -624,6 +649,11 @@ namespace AssetBookmarks.Editor
                 return string.IsNullOrEmpty(bookmark.GlobalId)
                     ? string.Empty
                     : $"scene-object:{bookmark.GlobalId}";
+            }
+
+            if (bookmark.Kind == BookmarkKind.MenuItem)
+            {
+                return $"menu-item:{bookmark.StoredPath}";
             }
 
             var path = bookmark.ResolvedPath;

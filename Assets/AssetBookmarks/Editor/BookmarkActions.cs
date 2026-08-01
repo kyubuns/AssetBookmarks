@@ -20,6 +20,11 @@ namespace AssetBookmarks.Editor
                 return true;
             }
 
+            if (bookmark.Kind == BookmarkKind.MenuItem)
+            {
+                return EditorApplication.ExecuteMenuItem(bookmark.StoredPath);
+            }
+
             if (!bookmark.TryResolveTarget(out var path))
             {
                 return false;
@@ -73,6 +78,11 @@ namespace AssetBookmarks.Editor
 
         internal static string GetActionLabel(Bookmark bookmark)
         {
+            if (bookmark.Kind == BookmarkKind.MenuItem)
+            {
+                return "Run";
+            }
+
             if (bookmark.Kind == BookmarkKind.External || bookmark.Kind == BookmarkKind.Url)
             {
                 return "Open";

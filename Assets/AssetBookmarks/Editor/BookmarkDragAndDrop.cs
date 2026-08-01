@@ -15,7 +15,9 @@ namespace AssetBookmarks.Editor
         {
             objectReferences = Array.Empty<UnityEngine.Object>();
             paths = Array.Empty<string>();
-            if (bookmark == null || bookmark.Kind == BookmarkKind.Url)
+            if (bookmark == null ||
+                bookmark.Kind == BookmarkKind.Url ||
+                bookmark.Kind == BookmarkKind.MenuItem)
             {
                 return false;
             }
@@ -105,6 +107,7 @@ namespace AssetBookmarks.Editor
                 !CanStartManipulation(evt) ||
                 bookmark == null ||
                 bookmark.Kind == BookmarkKind.Url ||
+                bookmark.Kind == BookmarkKind.MenuItem ||
                 !bookmark.IsAvailable)
             {
                 return;
